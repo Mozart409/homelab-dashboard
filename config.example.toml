@@ -1,0 +1,68 @@
+# Homelab Dashboard Configuration
+# Copy to config.toml and adjust values
+
+# Server settings
+listen_address = "0.0.0.0"
+port = 3000
+
+# SearXNG - your self-hosted search instance
+[searxng]
+url = "https://search.example.com"
+
+# Weather - Open-Meteo (free, no API key needed)
+[weather]
+latitude = 52.52
+longitude = 13.41
+location = "Berlin"
+
+# Proxmox VE
+# Create an API token: Datacenter > Permissions > API Tokens
+# Token format: user@realm!tokenid
+[proxmox]
+url = "https://proxmox.local:8006"
+token_id = "dashboard@pve!monitoring"
+token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Jellyfin
+# Create an API key: Dashboard > API Keys
+[jellyfin]
+url = "https://jellyfin.local"
+api_key = "your-jellyfin-api-key"
+
+# Home Assistant
+# Create a long-lived access token: Profile > Long-Lived Access Tokens
+[homeassistant]
+url = "https://homeassistant.local"
+token = "your-home-assistant-token"
+
+# Pinchflat (your custom fork with REST API)
+[pinchflat]
+url = "https://pinchflat.local"
+api_key = "optional-api-key"  # If your fork requires auth
+
+# Health checks - monitor your services
+[[health_checks]]
+name = "Router"
+url = "http://192.168.1.1"
+timeout_ms = 3000
+
+[[health_checks]]
+name = "NAS"
+url = "http://nas.local:5000"
+timeout_ms = 5000
+
+[[health_checks]]
+name = "Pi-hole"
+url = "http://pihole.local/admin"
+timeout_ms = 3000
+expected_status = 200
+
+[[health_checks]]
+name = "Gitea"
+url = "https://git.local/api/healthz"
+timeout_ms = 5000
+
+[[health_checks]]
+name = "Nextcloud"
+url = "https://cloud.local/status.php"
+timeout_ms = 5000

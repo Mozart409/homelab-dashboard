@@ -1,0 +1,60 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.metadata.crane]
+name = "homelab-dashboard"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/yourusername/homelab-dashboard"
+
+[workspace.dependencies]
+# Leptos ecosystem
+leptos = { version = "0.8", features = ["csr", "ssr", "hydrate"] }
+leptos_axum = "0.8"
+leptos_meta = "0.8"
+leptos_router = "0.8"
+
+# Axum & tower
+axum = { version = "0.8", features = ["macros"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "cors", "trace", "compression-gzip"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# HTTP client
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# Error handling & tracing (per your preferences)
+color-eyre = "0.6"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# IDs (per your preferences)
+ulid = { version = "1", features = ["serde"] }
+
+# Configuration
+config = { version = "0.14", default-features = false, features = ["toml"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Caching
+moka = { version = "0.12", features = ["future"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+
+[profile.dev.package.leptos]
+opt-level = 2

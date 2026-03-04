@@ -1,0 +1,29 @@
+# Rust
+/target/
+Cargo.lock
+
+# Leptos
+/target/site/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Config with secrets
+config.toml
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Nix
+result
+result-*
+.direnv/
+
