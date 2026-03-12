@@ -74,22 +74,33 @@ impl WeatherCondition {
 // Pinchflat Types
 // ============================================================================
 
+/// A media item from Pinchflat's `/api/media/recent_downloads` endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PinchflatVideo {
-    pub id: Ulid,
+    /// Internal database ID from Pinchflat.
+    pub id: i64,
+    /// UUID of the media item (used for streaming/thumbnail URLs).
+    pub uuid: String,
+    /// Video title.
     pub title: String,
+    /// External media ID (e.g., `YouTube` video ID).
+    pub media_id: String,
+    /// Source/channel name (from the nested source object).
     pub channel: String,
-    pub thumbnail_url: Option<String>,
-    pub duration_seconds: u32,
-    pub downloaded_at: DateTime<Utc>,
-    pub file_path: String,
+    /// When the media was downloaded.
+    pub downloaded_at: Option<DateTime<Utc>>,
+    /// When the media was originally uploaded.
+    pub uploaded_at: Option<DateTime<Utc>>,
 }
 
+/// Aggregated Pinchflat status for the dashboard.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PinchflatStatus {
+    /// Recent downloads.
     pub videos: Vec<PinchflatVideo>,
+    /// Total number of downloaded media items.
     pub total_downloads: u64,
-    pub is_downloading: bool,
+    /// When this data was fetched.
     pub fetched_at: DateTime<Utc>,
 }
 

@@ -49,18 +49,20 @@ pub fn VideoCard() -> impl IntoView {
 
 #[component]
 fn VideoContent(status: PinchflatStatus) -> impl IntoView {
+    let videos = status.videos.clone();
+    let is_empty = videos.is_empty();
+
     view! {
         <div class="p-4">
-            <Show when=move || status.is_downloading>
-                <div class="flex items-center gap-2 px-4 py-2 mb-4 bg-accent-blue/10 rounded text-accent-blue text-sm">
-                    <span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"/>
-                    <span>"Downloading..."</span>
+            <Show when=move || is_empty>
+                <div class="text-center py-4 text-text-muted text-sm">
+                    "No recent downloads"
                 </div>
             </Show>
 
             <ul class="flex flex-col gap-4">
                 <For
-                    each=move || status.videos.clone()
+                    each=move || videos.clone()
                     key=|video| video.id
                     children=move |video| {
                         view! { <VideoItem video=video/> }
@@ -77,30 +79,36 @@ fn VideoContent(status: PinchflatStatus) -> impl IntoView {
 }
 
 #[component]
-#[allow(clippy::redundant_clone)]
 fn VideoItem(video: PinchflatVideo) -> impl IntoView {
-    let duration = format_duration(video.duration_seconds);
-    let downloaded = video.downloaded_at.format("%b %d, %H:%M").to_string();
+    let downloaded = video.downloaded_at.map_or_else(
+        || "Unknown".to_string(),
+        |dt| dt.format("%b %d, %H:%M").to_string(),
+    );
+
+    // Construct YouTube thumbnail URL from the media_id (YouTube video ID)
+    // YouTube provides multiple thumbnail sizes - mqdefault is 320x180
+    let thumbnail_url = format!("https://i.ytimg.com/vi/{}/mqdefault.jpg", video.media_id);
 
     view! {
         <li class="flex gap-4">
             <div class="relative shrink-0 w-[120px] h-[68px] bg-bg-elevated rounded overflow-hidden">
-                {video.thumbnail_url.as_ref().map_or_else(|| view! {
-                    <div class="flex items-center justify-center w-full h-full text-text-muted">
-                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M8 5v14l11-7z"/>
-                        </svg>
-                    </div>
-                }.into_any(), |url| view! {
-                    <img class="w-full h-full object-cover" src={url.clone()} alt="" loading="lazy"/>
-                }.into_any())}
-                <span class="absolute bottom-1 right-1 px-1 py-0.5 bg-black/80 rounded-sm font-mono text-[0.7rem] text-white">{duration}</span>
+                <img
+                    class="w-full h-full object-cover"
+                    src={thumbnail_url}
+                    alt=""
+                    loading="lazy"
+                />
+                <div class="absolute inset-0 flex items-center justify-center text-text-muted pointer-events-none">
+                    <svg class="w-6 h-6 opacity-30" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                </div>
             </div>
             <div class="flex-1 min-w-0">
                 <div class="text-sm font-medium text-text-primary truncate mb-1" title={video.title.clone()}>
                     {video.title.clone()}
                 </div>
-                <div class="text-xs text-text-secondary mb-1">{video.channel.clone()}</div>
+                <div class="text-xs text-text-secondary mb-1">{video.channel}</div>
                 <div class="text-[0.7rem] text-text-muted font-mono">{downloaded}</div>
             </div>
         </li>
@@ -124,17 +132,5 @@ fn VideoSkeleton() -> impl IntoView {
                 }).collect_view()}
             </ul>
         </div>
-    }
-}
-
-fn format_duration(seconds: u32) -> String {
-    let hours = seconds / 3600;
-    let minutes = (seconds % 3600) / 60;
-    let secs = seconds % 60;
-
-    if hours > 0 {
-        format!("{hours}:{minutes:02}:{secs:02}")
-    } else {
-        format!("{minutes}:{secs:02}")
     }
 }

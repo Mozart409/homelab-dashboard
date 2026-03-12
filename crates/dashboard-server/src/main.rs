@@ -21,9 +21,11 @@ async fn main() -> Result<()> {
 
     // Initialize tracing
     tracing_subscriber::registry()
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-            "dashboard_server=debug,dashboard_app=debug,tower_http=debug".into()
-        }))
+        .with(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                "dashboard_server=info,dashboard_app=info,tower_http=info".into()
+            }),
+        )
         .with(tracing_subscriber::fmt::layer())
         .init();
 
