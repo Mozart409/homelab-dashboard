@@ -88,6 +88,25 @@
             '';
           });
 
+        # Build CSS with Tailwind v4
+        tailwindCss = pkgs.stdenv.mkDerivation {
+          pname = "dashboard-css";
+          version = "0.1.0";
+          src = pkgs.lib.cleanSource ./.;
+
+          nativeBuildInputs = [pkgs.tailwindcss_4];
+
+          buildPhase = ''
+            cd static
+            tailwindcss -i input.css -o dashboard.css --minify
+          '';
+
+          installPhase = ''
+            mkdir -p $out
+            cp static/dashboard.css $out/
+          '';
+        };
+
         # Build the server binary
         server = craneLib.buildPackage (commonArgs
           // {
@@ -102,9 +121,16 @@
               mkdir -p $out/share/dashboard/pkg
               cp -r ${wasmClient}/pkg/* $out/share/dashboard/pkg/
 
-              # Copy static assets if any
+              # Copy Tailwind-compiled CSS
+              cp ${tailwindCss}/dashboard.css $out/share/dashboard/
+
+              # Copy other static assets if any (excluding input.css)
               if [ -d static ]; then
-                cp -r static/* $out/share/dashboard/
+                for f in static/*; do
+                  if [ "$(basename "$f")" != "input.css" ]; then
+                    cp -r "$f" $out/share/dashboard/
+                  fi
+                done
               fi
             '';
           });

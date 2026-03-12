@@ -13,14 +13,14 @@ pub fn HealthGrid() -> impl IntoView {
     );
 
     view! {
-        <div class="card health-card">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <span class="service-icon">"🩺"</span>
+        <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
+            <div class="flex items-center justify-between p-4 border-b border-border-subtle bg-bg-secondary">
+                <h3 class="font-mono text-sm font-semibold text-text-primary flex items-center gap-2">
+                    <span class="text-lg">"🩺"</span>
                     "Service Health"
                 </h3>
                 <button
-                    class="refresh-btn"
+                    class="flex items-center justify-center w-7 h-7 bg-transparent border border-border rounded text-text-muted cursor-pointer transition-all duration-150 hover:text-text-primary hover:border-text-muted"
                     on:click=move |_| resource.refetch()
                     title="Refresh"
                 >
@@ -29,19 +29,17 @@ pub fn HealthGrid() -> impl IntoView {
             </div>
 
             <Suspense fallback=move || view! { <HealthSkeleton/> }>
-                {move || {
-                    resource.get().map(|result| {
-                        match result {
-                            Ok(overview) => view! { <HealthContent overview=overview/> }.into_any(),
-                            Err(e) => view! {
-                                <div class="card-error">
-                                    <span class="error-icon">"⚠️"</span>
-                                    <span>{e.to_string()}</span>
-                                </div>
-                            }.into_any(),
-                        }
-                    })
-                }}
+                {move || Suspend::new(async move {
+                    match resource.await {
+                        Ok(overview) => view! { <HealthContent overview=overview/> }.into_any(),
+                        Err(e) => view! {
+                            <div class="flex items-center gap-2 p-4 text-accent-red text-sm">
+                                <span>"⚠️"</span>
+                                <span>{e.to_string()}</span>
+                            </div>
+                        }.into_any(),
+                    }
+                })}
             </Suspense>
         </div>
     }
@@ -52,25 +50,26 @@ fn HealthContent(overview: HealthOverview) -> impl IntoView {
     let all_healthy = overview.unhealthy_count == 0;
 
     view! {
-        <div class="health-content">
+        <div class="p-4">
             // Summary bar
-            <div class=move || format!("health-summary {}", if all_healthy { "all-healthy" } else { "has-issues" })>
+            <div class=move || format!(
+                "flex items-center gap-2 px-4 py-2 rounded mb-4 text-sm font-medium {}",
+                if all_healthy { "bg-accent-green/10 text-accent-green" } else { "bg-accent-red/10 text-accent-red" }
+            )>
                 <Show
                     when=move || all_healthy
                     fallback=move || view! {
-                        <span class="summary-icon">"⚠️"</span>
-                        <span class="summary-text">
-                            {overview.unhealthy_count} " service(s) unhealthy"
-                        </span>
+                        <span>"⚠️"</span>
+                        <span>{overview.unhealthy_count} " service(s) unhealthy"</span>
                     }
                 >
-                    <span class="summary-icon">"✅"</span>
-                    <span class="summary-text">"All systems operational"</span>
+                    <span>"✅"</span>
+                    <span>"All systems operational"</span>
                 </Show>
             </div>
 
             // Health check grid
-            <div class="health-grid">
+            <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2">
                 <For
                     each=move || overview.checks.clone()
                     key=|check| check.id
@@ -80,7 +79,7 @@ fn HealthContent(overview: HealthOverview) -> impl IntoView {
                 />
             </div>
 
-            <div class="service-updated">
+            <div class="text-[0.7rem] text-text-muted pt-2 mt-4 border-t border-border-subtle">
                 "Checked: " {overview.fetched_at.format("%H:%M:%S").to_string()}
             </div>
         </div>
@@ -89,11 +88,11 @@ fn HealthContent(overview: HealthOverview) -> impl IntoView {
 
 #[component]
 fn HealthCheckItem(check: HealthCheck) -> impl IntoView {
-    let (status_class, status_icon) = match check.status {
-        HealthStatus::Healthy => ("status-healthy", "🟢"),
-        HealthStatus::Degraded => ("status-degraded", "🟡"),
-        HealthStatus::Unhealthy => ("status-unhealthy", "🔴"),
-        HealthStatus::Unknown => ("status-unknown", "⚪"),
+    let (border_color, status_icon) = match check.status {
+        HealthStatus::Healthy => ("border-l-accent-green", "🟢"),
+        HealthStatus::Degraded => ("border-l-accent-yellow", "🟡"),
+        HealthStatus::Unhealthy => ("border-l-accent-red", "🔴"),
+        HealthStatus::Unknown => ("border-l-text-muted", "⚪"),
     };
 
     let response_time = check
@@ -101,25 +100,20 @@ fn HealthCheckItem(check: HealthCheck) -> impl IntoView {
         .map_or_else(|| "—".to_string(), |ms| format!("{ms}ms"));
 
     view! {
-        <div class=format!("health-item {}", status_class)>
-            <div class="health-item-header">
-                <span class="status-indicator">{status_icon}</span>
-                <span class="service-name">{check.name.clone()}</span>
+        <div class=format!("flex flex-col gap-1 px-4 py-2 bg-bg-elevated rounded border-l-[3px] {}", border_color)>
+            <div class="flex items-center gap-2">
+                <span class="text-xs">{status_icon}</span>
+                <span class="text-sm font-medium">{check.name.clone()}</span>
             </div>
-            <div class="health-item-details">
-                <span class="response-time">{response_time}</span>
-                {move || {
-                    let error_msg = check.error_message.clone();
-                    if error_msg.is_some() {
-                        view! {
-                            <span class="error-hint" title={error_msg.unwrap_or_default()}>
-                                "ℹ️"
-                            </span>
-                        }.into_any()
-                    } else {
-                        ().into_any()
+            <div class="flex items-center gap-2">
+                <span class="font-mono text-xs text-text-muted">{response_time}</span>
+                {check.error_message.as_ref().map(|msg| {
+                    view! {
+                        <span class="cursor-help" title={msg.clone()}>
+                            "ℹ️"
+                        </span>
                     }
-                }}
+                })}
             </div>
         </div>
     }
@@ -128,11 +122,11 @@ fn HealthCheckItem(check: HealthCheck) -> impl IntoView {
 #[component]
 fn HealthSkeleton() -> impl IntoView {
     view! {
-        <div class="health-content skeleton">
-            <div class="skeleton-summary"/>
-            <div class="health-grid">
+        <div class="p-4 animate-pulse">
+            <div class="w-full h-9 bg-bg-elevated rounded mb-4"/>
+            <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2">
                 {(0..6).map(|_| view! {
-                    <div class="skeleton-health-item"/>
+                    <div class="h-[60px] bg-bg-elevated rounded"/>
                 }).collect_view()}
             </div>
         </div>
@@ -142,7 +136,7 @@ fn HealthSkeleton() -> impl IntoView {
 #[component]
 fn RefreshIcon() -> impl IntoView {
     view! {
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
             <path d="M3 3v5h5"/>
             <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>

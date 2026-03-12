@@ -47,39 +47,39 @@ pub fn App() -> impl IntoView {
         <Meta charset="utf-8"/>
         <Meta name="viewport" content="width=device-width, initial-scale=1"/>
         <Title text="Homelab Dashboard"/>
-        <Stylesheet href="/pkg/dashboard.css"/>
+        <Stylesheet href="/dashboard.css"/>
 
-        <main class="dashboard">
-            <header class="dashboard-header">
-                <h1 class="dashboard-title">"🏠 Homelab"</h1>
-                <div class="search-wrapper">
+        <main class="max-w-[1400px] mx-auto p-6 min-h-screen flex flex-col bg-bg-primary text-text-primary font-sans">
+            <header class="flex items-center justify-between gap-6 mb-8 pb-6 border-b border-border flex-col md:flex-row">
+                <h1 class="font-mono text-2xl font-semibold text-text-primary flex items-center gap-2">"🏠 Homelab"</h1>
+                <div class="flex-1 max-w-[500px] w-full md:w-auto">
                     <SearchBox searxng_url=searxng_url/>
                 </div>
             </header>
 
-            <div class="dashboard-grid">
+            <div class="flex-1 flex flex-col gap-8">
                 // Top row: Weather + Recent videos
-                <section class="grid-section top-row">
+                <section class="grid gap-6 grid-cols-1 lg:grid-cols-[300px_1fr]">
                     <WeatherCard config=weather_config/>
                     <VideoCard/>
                 </section>
 
                 // Middle row: Service cards
-                <section class="grid-section services-row">
+                <section class="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
                     <ProxmoxCard/>
                     <JellyfinCard/>
                     <HomeAssistantCard config=ha_config/>
                 </section>
 
                 // Bottom row: Health checks
-                <section class="grid-section health-row">
+                <section class="grid gap-6">
                     <HealthGrid/>
                 </section>
             </div>
 
-            <footer class="dashboard-footer">
+            <footer class="mt-auto pt-6 border-t border-border-subtle flex items-center justify-center gap-2 text-text-muted text-sm">
                 <span>"Homelab Dashboard"</span>
-                <span class="separator">"•"</span>
+                <span>"•"</span>
                 <span>"Powered by Leptos + Axum"</span>
             </footer>
         </main>

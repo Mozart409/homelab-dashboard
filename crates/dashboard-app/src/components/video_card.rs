@@ -13,15 +13,15 @@ pub fn VideoCard() -> impl IntoView {
     );
 
     view! {
-        <div class="card video-card">
-            <div class="card-header">
-                <h3 class="card-title">"Recent Downloads"</h3>
+        <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
+            <div class="flex items-center justify-between p-4 border-b border-border-subtle bg-bg-secondary">
+                <h3 class="font-mono text-sm font-semibold text-text-primary">"Recent Downloads"</h3>
                 <button
-                    class="refresh-btn"
+                    class="flex items-center justify-center w-7 h-7 bg-transparent border border-border rounded text-text-muted cursor-pointer transition-all duration-150 hover:text-text-primary hover:border-text-muted"
                     on:click=move |_| videos_resource.refetch()
                     title="Refresh"
                 >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                         <path d="M3 3v5h5"/>
                         <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
@@ -31,19 +31,17 @@ pub fn VideoCard() -> impl IntoView {
             </div>
 
             <Suspense fallback=move || view! { <VideoSkeleton/> }>
-                {move || {
-                    videos_resource.get().map(|result| {
-                        match result {
-                            Ok(status) => view! { <VideoContent status=status/> }.into_any(),
-                            Err(e) => view! {
-                                <div class="card-error">
-                                    <span class="error-icon">"⚠️"</span>
-                                    <span>{e.to_string()}</span>
-                                </div>
-                            }.into_any(),
-                        }
-                    })
-                }}
+                {move || Suspend::new(async move {
+                    match videos_resource.await {
+                        Ok(status) => view! { <VideoContent status=status/> }.into_any(),
+                        Err(e) => view! {
+                            <div class="flex items-center gap-2 p-4 text-accent-red text-sm">
+                                <span>"⚠️"</span>
+                                <span>{e.to_string()}</span>
+                            </div>
+                        }.into_any(),
+                    }
+                })}
             </Suspense>
         </div>
     }
@@ -52,15 +50,15 @@ pub fn VideoCard() -> impl IntoView {
 #[component]
 fn VideoContent(status: PinchflatStatus) -> impl IntoView {
     view! {
-        <div class="video-content">
+        <div class="p-4">
             <Show when=move || status.is_downloading>
-                <div class="download-indicator">
-                    <span class="download-spinner"/>
+                <div class="flex items-center gap-2 px-4 py-2 mb-4 bg-accent-blue/10 rounded text-accent-blue text-sm">
+                    <span class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"/>
                     <span>"Downloading..."</span>
                 </div>
             </Show>
 
-            <ul class="video-list">
+            <ul class="flex flex-col gap-4">
                 <For
                     each=move || status.videos.clone()
                     key=|video| video.id
@@ -70,9 +68,9 @@ fn VideoContent(status: PinchflatStatus) -> impl IntoView {
                 />
             </ul>
 
-            <div class="video-stats">
-                <span class="stat-label">"Total downloads:"</span>
-                <span class="stat-value">{status.total_downloads}</span>
+            <div class="flex justify-between pt-4 border-t border-border-subtle text-xs">
+                <span class="text-text-muted">"Total downloads:"</span>
+                <span class="text-text-secondary font-mono">{status.total_downloads}</span>
             </div>
         </div>
     }
@@ -84,28 +82,28 @@ fn VideoItem(video: PinchflatVideo) -> impl IntoView {
     let downloaded = video.downloaded_at.format("%b %d, %H:%M").to_string();
 
     view! {
-        <li class="video-item">
-            <div class="video-thumbnail">
+        <li class="flex gap-4">
+            <div class="relative shrink-0 w-[120px] h-[68px] bg-bg-elevated rounded overflow-hidden">
                 {match &video.thumbnail_url {
                     Some(url) => view! {
-                        <img src={url.clone()} alt="" loading="lazy"/>
+                        <img class="w-full h-full object-cover" src={url.clone()} alt="" loading="lazy"/>
                     }.into_any(),
                     None => view! {
-                        <div class="thumbnail-placeholder">
-                            <svg viewBox="0 0 24 24" fill="currentColor">
+                        <div class="flex items-center justify-center w-full h-full text-text-muted">
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M8 5v14l11-7z"/>
                             </svg>
                         </div>
                     }.into_any(),
                 }}
-                <span class="video-duration">{duration}</span>
+                <span class="absolute bottom-1 right-1 px-1 py-0.5 bg-black/80 rounded-sm font-mono text-[0.7rem] text-white">{duration}</span>
             </div>
-            <div class="video-info">
-                <div class="video-title" title={video.title.clone()}>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium text-text-primary truncate mb-1" title={video.title.clone()}>
                     {video.title.clone()}
                 </div>
-                <div class="video-channel">{video.channel.clone()}</div>
-                <div class="video-downloaded">{downloaded}</div>
+                <div class="text-xs text-text-secondary mb-1">{video.channel.clone()}</div>
+                <div class="text-[0.7rem] text-text-muted font-mono">{downloaded}</div>
             </div>
         </li>
     }
@@ -114,15 +112,15 @@ fn VideoItem(video: PinchflatVideo) -> impl IntoView {
 #[component]
 fn VideoSkeleton() -> impl IntoView {
     view! {
-        <div class="video-content skeleton">
-            <ul class="video-list">
+        <div class="p-4 animate-pulse">
+            <ul class="flex flex-col gap-4">
                 {(0..3).map(|_| view! {
-                    <li class="video-item skeleton">
-                        <div class="skeleton-thumbnail"/>
-                        <div class="video-info">
-                            <div class="skeleton-title"/>
-                            <div class="skeleton-channel"/>
-                            <div class="skeleton-date"/>
+                    <li class="flex gap-4">
+                        <div class="w-[120px] h-[68px] bg-bg-elevated rounded"/>
+                        <div class="flex-1">
+                            <div class="w-4/5 h-3.5 bg-bg-elevated rounded mb-1"/>
+                            <div class="w-3/5 h-3 bg-bg-elevated rounded mb-1"/>
+                            <div class="w-2/5 h-2.5 bg-bg-elevated rounded"/>
                         </div>
                     </li>
                 }).collect_view()}

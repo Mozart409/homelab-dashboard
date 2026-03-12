@@ -26,15 +26,15 @@ pub fn WeatherCard(config: WeatherConfig) -> impl IntoView {
     );
 
     view! {
-        <div class="card weather-card">
-            <div class="card-header">
-                <h3 class="card-title">"Weather"</h3>
+        <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
+            <div class="flex items-center justify-between p-4 border-b border-border-subtle bg-bg-secondary">
+                <h3 class="font-mono text-sm font-semibold text-text-primary">"Weather"</h3>
                 <button
-                    class="refresh-btn"
+                    class="flex items-center justify-center w-7 h-7 bg-transparent border border-border rounded text-text-muted cursor-pointer transition-all duration-150 hover:text-text-primary hover:border-text-muted"
                     on:click=move |_| weather_resource.refetch()
                     title="Refresh"
                 >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                         <path d="M3 3v5h5"/>
                         <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
@@ -44,19 +44,17 @@ pub fn WeatherCard(config: WeatherConfig) -> impl IntoView {
             </div>
 
             <Suspense fallback=move || view! { <WeatherSkeleton/> }>
-                {move || {
-                    weather_resource.get().map(|result| {
-                        match result {
-                            Ok(weather) => view! { <WeatherContent weather=weather/> }.into_any(),
-                            Err(e) => view! {
-                                <div class="card-error">
-                                    <span class="error-icon">"⚠️"</span>
-                                    <span>{e.to_string()}</span>
-                                </div>
-                            }.into_any(),
-                        }
-                    })
-                }}
+                {move || Suspend::new(async move {
+                    match weather_resource.await {
+                        Ok(weather) => view! { <WeatherContent weather=weather/> }.into_any(),
+                        Err(e) => view! {
+                            <div class="flex items-center gap-2 p-4 text-accent-red text-sm">
+                                <span>"⚠️"</span>
+                                <span>{e.to_string()}</span>
+                            </div>
+                        }.into_any(),
+                    }
+                })}
             </Suspense>
         </div>
     }
@@ -67,35 +65,35 @@ fn WeatherContent(weather: WeatherData) -> impl IntoView {
     let wind_direction = wind_direction_to_cardinal(weather.wind_direction);
 
     view! {
-        <div class="weather-content">
-            <div class="weather-main">
-                <span class="weather-icon">{weather.icon.clone()}</span>
-                <div class="weather-temp">
-                    <span class="temp-value">{format!("{:.1}", weather.temperature)}</span>
-                    <span class="temp-unit">"°C"</span>
+        <div class="p-4">
+            <div class="flex items-center gap-4 mb-4">
+                <span class="text-5xl">{weather.icon.clone()}</span>
+                <div class="flex items-start">
+                    <span class="font-mono text-4xl font-semibold leading-none">{format!("{:.1}", weather.temperature)}</span>
+                    <span class="text-base text-text-muted mt-1">"°C"</span>
                 </div>
             </div>
 
-            <div class="weather-location">{weather.location.clone()}</div>
+            <div class="text-sm text-text-secondary mb-4">{weather.location.clone()}</div>
 
-            <div class="weather-details">
-                <div class="weather-detail">
-                    <span class="detail-label">"Feels like"</span>
-                    <span class="detail-value">{format!("{:.1}°C", weather.feels_like)}</span>
+            <div class="flex flex-col gap-1 pt-4 border-t border-border-subtle">
+                <div class="flex justify-between text-xs">
+                    <span class="text-text-muted">"Feels like"</span>
+                    <span class="text-text-secondary font-mono">{format!("{:.1}°C", weather.feels_like)}</span>
                 </div>
-                <div class="weather-detail">
-                    <span class="detail-label">"Humidity"</span>
-                    <span class="detail-value">{format!("{}%", weather.humidity)}</span>
+                <div class="flex justify-between text-xs">
+                    <span class="text-text-muted">"Humidity"</span>
+                    <span class="text-text-secondary font-mono">{format!("{}%", weather.humidity)}</span>
                 </div>
-                <div class="weather-detail">
-                    <span class="detail-label">"Wind"</span>
-                    <span class="detail-value">
+                <div class="flex justify-between text-xs">
+                    <span class="text-text-muted">"Wind"</span>
+                    <span class="text-text-secondary font-mono">
                         {format!("{:.1} km/h {}", weather.wind_speed, wind_direction)}
                     </span>
                 </div>
             </div>
 
-            <div class="weather-updated">
+            <div class="mt-4 text-xs text-text-muted">
                 "Updated: " {weather.fetched_at.format("%H:%M").to_string()}
             </div>
         </div>
@@ -105,16 +103,16 @@ fn WeatherContent(weather: WeatherData) -> impl IntoView {
 #[component]
 fn WeatherSkeleton() -> impl IntoView {
     view! {
-        <div class="weather-content skeleton">
-            <div class="weather-main">
-                <div class="skeleton-icon"/>
-                <div class="skeleton-temp"/>
+        <div class="p-4 animate-pulse">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="w-12 h-12 bg-bg-elevated rounded-lg"/>
+                <div class="w-20 h-10 bg-bg-elevated rounded"/>
             </div>
-            <div class="skeleton-location"/>
-            <div class="weather-details">
-                <div class="skeleton-detail"/>
-                <div class="skeleton-detail"/>
-                <div class="skeleton-detail"/>
+            <div class="w-24 h-4 bg-bg-elevated rounded mb-4"/>
+            <div class="flex flex-col gap-2 pt-4 border-t border-border-subtle">
+                <div class="w-full h-4 bg-bg-elevated rounded"/>
+                <div class="w-full h-4 bg-bg-elevated rounded"/>
+                <div class="w-full h-4 bg-bg-elevated rounded"/>
             </div>
         </div>
     }

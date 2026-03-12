@@ -21,12 +21,12 @@ pub fn SearchBox(searxng_url: Signal<String>) -> impl IntoView {
     let on_search = move |ev: leptos::ev::SubmitEvent| {
         ev.prevent_default();
         
-        let q = query.get();
+        let q = query.get_untracked();
         if q.trim().is_empty() {
             return;
         }
 
-        let url = searxng_url.get();
+        let url = searxng_url.get_untracked();
         set_is_searching.set(true);
         set_error.set(None);
         set_show_results.set(true);
@@ -49,7 +49,7 @@ pub fn SearchBox(searxng_url: Signal<String>) -> impl IntoView {
         // Delay to allow click on results
         set_timeout(
             move || {
-                if !is_searching.get() {
+                if !is_searching.get_untracked() {
                     set_show_results.set(false);
                 }
             },
@@ -58,65 +58,65 @@ pub fn SearchBox(searxng_url: Signal<String>) -> impl IntoView {
     };
 
     view! {
-        <div class="search-container">
-            <form on:submit=on_search class="search-form">
-                <div class="search-input-wrapper">
-                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div class="relative">
+            <form on:submit=on_search class="w-full">
+                <div class="relative flex items-center">
+                    <svg class="absolute left-4 w-[18px] h-[18px] text-text-muted pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"/>
                         <path d="m21 21-4.35-4.35"/>
                     </svg>
                     <input
                         type="text"
-                        class="search-input"
+                        class="w-full py-2 px-4 pl-[calc(1rem+24px)] bg-bg-secondary border border-border rounded-lg text-text-primary font-mono text-sm transition-all duration-150 placeholder:text-text-muted focus:outline-none focus:border-accent-blue focus:ring-[3px] focus:ring-accent-blue/15"
                         placeholder="Search the web..."
                         prop:value=query
                         on:input=move |ev| set_query.set(event_target_value(&ev))
                         on:focus=move |_| {
-                            if !results.get().is_empty() {
+                            if !results.get_untracked().is_empty() {
                                 set_show_results.set(true);
                             }
                         }
                         on:blur=on_blur
                     />
-                    <Show when=move || is_searching.get()>
-                        <div class="search-spinner"/>
+                    <Show when=move || is_searching.with_untracked(|s| *s)>
+                        <div class="absolute right-4 w-4 h-4 border-2 border-border border-t-accent-blue rounded-full animate-spin"/>
                     </Show>
                 </div>
             </form>
 
-            <Show when=move || show_results.get()>
-                <div class="search-results">
+            <Show when=move || show_results.with_untracked(|s| *s)>
+                <div class="absolute top-[calc(100%+0.25rem)] left-0 right-0 bg-bg-card border border-border rounded-lg shadow-lg max-h-[400px] overflow-y-auto z-[100]">
                     <Show
-                        when=move || error.get().is_none()
+                        when=move || error.with_untracked(|e| e.is_none())
                         fallback=move || view! {
-                            <div class="search-error">
+                            <div class="p-6 text-center text-accent-red">
                                 {move || error.get().unwrap_or_default()}
                             </div>
                         }
                     >
                         <Show
-                            when=move || !results.get().is_empty()
+                            when=move || results.with_untracked(|r| !r.is_empty())
                             fallback=move || view! {
-                                <Show when=move || !is_searching.get()>
-                                    <div class="search-empty">"No results found"</div>
+                                <Show when=move || is_searching.with_untracked(|s| !s)>
+                                    <div class="p-6 text-center text-text-muted">"No results found"</div>
                                 </Show>
                             }
                         >
-                            <ul class="search-results-list">
+                            <ul class="list-none">
                                 <For
                                     each=move || results.get()
                                     key=|result| result.url.clone()
                                     children=move |result| {
                                         let content = result.content.clone();
                                         view! {
-                                            <li class="search-result-item">
-                                                <a href={result.url.clone()} target="_blank" rel="noopener">
-                                                    <div class="result-title">{result.title.clone()}</div>
-                                                    <div class="result-url">{result.url.clone()}</div>
+                                            <li class="border-b border-border-subtle last:border-b-0">
+                                                <a href={result.url.clone()} target="_blank" rel="noopener" class="block p-4 no-underline transition-colors duration-150 hover:bg-bg-elevated">
+                                                    <div class="text-accent-blue font-medium mb-1">{result.title.clone()}</div>
+                                                    <div class="text-text-muted text-xs font-mono mb-1 truncate">{result.url.clone()}</div>
                                                     {move || {
                                                         if let Some(ref c) = content {
                                                             view! {
-                                                                <div class="result-snippet">{c.clone()}</div>
+                                                                <div class="text-text-secondary text-sm leading-snug line-clamp-2">{c.clone()}</div>
                                                             }.into_any()
                                                         } else {
                                                             ().into_any()
