@@ -5,11 +5,11 @@
 use axum::Router;
 use color_eyre::eyre::Result;
 use leptos::prelude::*;
-use leptos_axum::{generate_route_list, LeptosRoutes};
+use leptos_axum::{LeptosRoutes, generate_route_list};
 use std::net::SocketAddr;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 use dashboard_app::App;
 
@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
 
     // Load configuration
     let config = load_config()?;
-    
+
     // Log configuration (without secrets)
     tracing::info!(
         "Starting dashboard server on {}:{}",
@@ -44,10 +44,7 @@ async fn main() -> Result<()> {
         .output_name("dashboard")
         .site_root("target/site")
         .site_pkg_dir("pkg")
-        .site_addr(SocketAddr::new(
-            config.listen_address.parse()?,
-            config.port,
-        ))
+        .site_addr(SocketAddr::new(config.listen_address.parse()?, config.port))
         .build();
 
     // Generate routes from the app
@@ -67,9 +64,9 @@ async fn main() -> Result<()> {
     // Start the server
     let addr = SocketAddr::new(config.listen_address.parse()?, config.port);
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    
+
     tracing::info!("Dashboard available at http://{}", addr);
-    
+
     axum::serve(listener, app.into_make_service()).await?;
 
     Ok(())
@@ -185,7 +182,7 @@ fn default_listen_address() -> String {
 }
 
 fn default_port() -> u16 {
-    3000
+    8080
 }
 
 fn default_latitude() -> f64 {
@@ -210,7 +207,7 @@ fn load_config() -> Result<ServerConfig> {
     let config = Config::builder()
         // Start with defaults
         .set_default("listen_address", "0.0.0.0")?
-        .set_default("port", 3000)?
+        .set_default("port", 8080)?
         // Load from config file if present
         .add_source(File::with_name("config").required(false))
         .add_source(File::with_name("/etc/homelab-dashboard/config").required(false))
@@ -228,7 +225,9 @@ fn load_config() -> Result<ServerConfig> {
 fn apply_config_to_env(config: &ServerConfig) {
     // SearXNG
     if let Some(url) = &config.searxng.url {
-        unsafe { std::env::set_var("SEARXNG_URL", url); }
+        unsafe {
+            std::env::set_var("SEARXNG_URL", url);
+        }
     }
 
     // Weather
@@ -240,43 +239,63 @@ fn apply_config_to_env(config: &ServerConfig) {
 
     // Proxmox
     if let Some(url) = &config.proxmox.url {
-        unsafe { std::env::set_var("PROXMOX_URL", url); }
+        unsafe {
+            std::env::set_var("PROXMOX_URL", url);
+        }
     }
     if let Some(token_id) = &config.proxmox.token_id {
-        unsafe { std::env::set_var("PROXMOX_TOKEN_ID", token_id); }
+        unsafe {
+            std::env::set_var("PROXMOX_TOKEN_ID", token_id);
+        }
     }
     if let Some(token_secret) = &config.proxmox.token_secret {
-        unsafe { std::env::set_var("PROXMOX_TOKEN_SECRET", token_secret); }
+        unsafe {
+            std::env::set_var("PROXMOX_TOKEN_SECRET", token_secret);
+        }
     }
 
     // Jellyfin
     if let Some(url) = &config.jellyfin.url {
-        unsafe { std::env::set_var("JELLYFIN_URL", url); }
+        unsafe {
+            std::env::set_var("JELLYFIN_URL", url);
+        }
     }
     if let Some(api_key) = &config.jellyfin.api_key {
-        unsafe { std::env::set_var("JELLYFIN_API_KEY", api_key); }
+        unsafe {
+            std::env::set_var("JELLYFIN_API_KEY", api_key);
+        }
     }
 
     // Home Assistant
     if let Some(url) = &config.homeassistant.url {
-        unsafe { std::env::set_var("HOMEASSISTANT_URL", url); }
+        unsafe {
+            std::env::set_var("HOMEASSISTANT_URL", url);
+        }
     }
     if let Some(token) = &config.homeassistant.token {
-        unsafe { std::env::set_var("HOMEASSISTANT_TOKEN", token); }
+        unsafe {
+            std::env::set_var("HOMEASSISTANT_TOKEN", token);
+        }
     }
 
     // Pinchflat
     if let Some(url) = &config.pinchflat.url {
-        unsafe { std::env::set_var("PINCHFLAT_URL", url); }
+        unsafe {
+            std::env::set_var("PINCHFLAT_URL", url);
+        }
     }
     if let Some(api_key) = &config.pinchflat.api_key {
-        unsafe { std::env::set_var("PINCHFLAT_API_KEY", api_key); }
+        unsafe {
+            std::env::set_var("PINCHFLAT_API_KEY", api_key);
+        }
     }
 
     // Health checks as JSON
     if !config.health_checks.is_empty()
         && let Ok(json) = serde_json::to_string(&config.health_checks)
     {
-        unsafe { std::env::set_var("HEALTH_CHECKS", json); }
+        unsafe {
+            std::env::set_var("HEALTH_CHECKS", json);
+        }
     }
 }
