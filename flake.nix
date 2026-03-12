@@ -159,6 +159,8 @@
             # Development tools
             trunk # Alternative to cargo-leptos for dev
 
+            lefthook
+
             # Debugging
             lldb
 
@@ -170,12 +172,21 @@
           ];
 
           shellHook = ''
+            lefthook install
             echo "🏠 Homelab Dashboard Development Shell"
             echo ""
             echo "Commands:"
-            echo "  cargo leptos watch  - Run dev server with hot reload"
-            echo "  cargo build         - Build server"
-            echo "  cargo test          - Run tests"
+            echo "  cargo leptos watch   - Run dev server with hot reload"
+            echo "  cargo build          - Build server"
+            echo "  cargo test           - Run tests"
+            echo "  cargo fmt            - Format code"
+            echo "  cargo clippy         - Lint code"
+            echo "  lefthook run pre-commit - Run pre-commit checks"
+            echo "  lefthook run pre-push   - Run pre-push checks"
+            echo ""
+            echo "Hooks:"
+            echo "  fmt     - stage_fixed: true"
+            echo "  clippy  - stage_fixed: true"
             echo ""
           '';
         };
