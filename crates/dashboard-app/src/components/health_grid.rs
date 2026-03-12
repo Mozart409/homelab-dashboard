@@ -1,16 +1,13 @@
 //! Health check status grid component.
 
-use leptos::prelude::*;
 use crate::server::get_health_overview;
 use crate::types::{HealthCheck, HealthOverview, HealthStatus};
+use leptos::prelude::*;
 
 /// Displays a grid of health check statuses.
 #[component]
 pub fn HealthGrid() -> impl IntoView {
-    let resource = Resource::new(
-        || (),
-        |()| async move { get_health_overview().await },
-    );
+    let resource = Resource::new(|| (), |()| async move { get_health_overview().await });
 
     view! {
         <div class="bg-bg-card border border-border rounded-xl overflow-hidden">

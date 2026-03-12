@@ -1,7 +1,7 @@
 //! Main application component.
 
 use leptos::prelude::*;
-use leptos_meta::{provide_meta_context, Html, Meta, Stylesheet, Title};
+use leptos_meta::{Html, Meta, Stylesheet, Title, provide_meta_context};
 
 use crate::components::{
     HealthGrid, HomeAssistantCard, HomeAssistantConfig, JellyfinCard, ProxmoxCard, SearchBox,
