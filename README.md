@@ -60,7 +60,7 @@ cp config.example.toml config.toml
 cargo leptos watch
 ```
 
-Open http://localhost:3000
+Open http://localhost:8080
 
 ### Production Build
 
@@ -93,7 +93,7 @@ cargo leptos build --release
 
             settings = {
               listen_address = "0.0.0.0";
-              port = 3000;
+              port = 8080;
 
               searxng.url = "https://search.example.com";
 

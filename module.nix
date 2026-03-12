@@ -1,13 +1,15 @@
-{ config, lib, pkgs, ... }:
-
-let
-  cfg = config.services.homelab-dashboard;
-  
-  # Convert settings to TOML
-  settingsFormat = pkgs.formats.toml { };
-  configFile = settingsFormat.generate "homelab-dashboard.toml" cfg.settings;
-in
 {
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
+  cfg = config.services.homelab-dashboard;
+
+  # Convert settings to TOML
+  settingsFormat = pkgs.formats.toml {};
+  configFile = settingsFormat.generate "homelab-dashboard.toml" cfg.settings;
+in {
   options.services.homelab-dashboard = {
     enable = lib.mkEnableOption "Homelab Dashboard";
 
@@ -48,7 +50,7 @@ in
 
           port = lib.mkOption {
             type = lib.types.port;
-            default = 3000;
+            default = 8080;
             description = "Port to listen on.";
           };
 
@@ -60,7 +62,7 @@ in
                 description = "SearXNG instance URL.";
               };
             };
-            default = { };
+            default = {};
           };
 
           weather = lib.mkOption {
@@ -83,7 +85,7 @@ in
                 };
               };
             };
-            default = { };
+            default = {};
           };
 
           proxmox = lib.mkOption {
@@ -106,7 +108,7 @@ in
                 };
               };
             };
-            default = { };
+            default = {};
           };
 
           jellyfin = lib.mkOption {
@@ -124,7 +126,7 @@ in
                 };
               };
             };
-            default = { };
+            default = {};
           };
 
           homeassistant = lib.mkOption {
@@ -142,7 +144,7 @@ in
                 };
               };
             };
-            default = { };
+            default = {};
           };
 
           pinchflat = lib.mkOption {
@@ -160,7 +162,7 @@ in
                 };
               };
             };
-            default = { };
+            default = {};
           };
 
           health_checks = lib.mkOption {
@@ -186,12 +188,12 @@ in
                 };
               };
             });
-            default = [ ];
+            default = [];
             description = "List of health check endpoints.";
           };
         };
       };
-      default = { };
+      default = {};
       description = "Dashboard configuration.";
     };
 
@@ -223,13 +225,13 @@ in
       createHome = true;
     };
 
-    users.groups.${cfg.group} = { };
+    users.groups.${cfg.group} = {};
 
     # Systemd service
     systemd.services.homelab-dashboard = {
       description = "Homelab Dashboard";
-      wantedBy = [ "multi-user.target" ];
-      after = [ "network.target" ];
+      wantedBy = ["multi-user.target"];
+      after = ["network.target"];
 
       environment = {
         RUST_LOG = "info,dashboard_server=debug,dashboard_app=debug";
@@ -240,9 +242,9 @@ in
         User = cfg.user;
         Group = cfg.group;
         WorkingDirectory = cfg.dataDir;
-        
+
         ExecStart = "${cfg.package}/bin/dashboard-server";
-        
+
         # Load config file
         ExecStartPre = [
           "${pkgs.coreutils}/bin/install -m 600 ${configFile} ${cfg.dataDir}/config.toml"
@@ -260,14 +262,14 @@ in
         ProtectKernelTunables = true;
         ProtectKernelModules = true;
         ProtectControlGroups = true;
-        RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" ];
+        RestrictAddressFamilies = ["AF_INET" "AF_INET6" "AF_UNIX"];
         RestrictNamespaces = true;
         LockPersonality = true;
         RestrictRealtime = true;
         RestrictSUIDSGID = true;
-        
-        ReadWritePaths = [ cfg.dataDir ];
-        
+
+        ReadWritePaths = [cfg.dataDir];
+
         # Restart on failure
         Restart = "on-failure";
         RestartSec = "5s";
@@ -275,6 +277,6 @@ in
     };
 
     # Firewall
-    networking.firewall.allowedTCPPorts = lib.mkIf cfg.openFirewall [ cfg.settings.port ];
+    networking.firewall.allowedTCPPorts = lib.mkIf cfg.openFirewall [cfg.settings.port];
   };
 }

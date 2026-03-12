@@ -86,10 +86,10 @@ tailwind-input-file = "static/input.css"
 # tailwind-config-file = "tailwind.config.js"
 
 # The IP and port the server serves on
-site-addr = "127.0.0.1:3000"
+site-addr = "127.0.0.1:8000"
 
 # The port to use for automatic reload monitoring
-reload-port = 3001
+reload-port = 8081
 
 # Browser to open when starting (optional)
 # browserquery = "firefox"
