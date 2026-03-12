@@ -1,33 +1,37 @@
 //! Weather data fetching from Open-Meteo API.
 
 use crate::types::{WeatherCondition, WeatherData};
-use chrono::Utc;
 use leptos::prelude::*;
-use serde::Deserialize;
-
-/// Open-Meteo API response structure
-#[derive(Debug, Deserialize)]
-struct OpenMeteoResponse {
-    current: CurrentWeather,
-}
-
-#[derive(Debug, Deserialize)]
-struct CurrentWeather {
-    temperature_2m: f64,
-    apparent_temperature: f64,
-    relative_humidity_2m: u8,
-    wind_speed_10m: f64,
-    wind_direction_10m: u16,
-    weather_code: u8,
-}
 
 /// Server function to fetch weather data.
 /// Cached for 15 minutes on the server side.
 #[server]
-pub async fn get_weather(latitude: f64, longitude: f64, location_name: String) -> Result<WeatherData, ServerFnError> {
+pub async fn get_weather(
+    latitude: f64,
+    longitude: f64,
+    location_name: String,
+) -> Result<WeatherData, ServerFnError> {
+    use chrono::Utc;
+    use moka::future::Cache;
+    use serde::Deserialize;
     use std::sync::LazyLock;
     use std::time::Duration;
-    use moka::future::Cache;
+
+    /// Open-Meteo API response structure
+    #[derive(Debug, Deserialize)]
+    struct OpenMeteoResponse {
+        current: CurrentWeather,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct CurrentWeather {
+        temperature_2m: f64,
+        apparent_temperature: f64,
+        relative_humidity_2m: u8,
+        wind_speed_10m: f64,
+        wind_direction_10m: u16,
+        weather_code: u8,
+    }
 
     // Shared cache across requests
     static WEATHER_CACHE: LazyLock<Cache<String, WeatherData>> = LazyLock::new(|| {
@@ -63,7 +67,7 @@ pub async fn get_weather(latitude: f64, longitude: f64, location_name: String) -
         .map_err(|e| ServerFnError::new(format!("Failed to parse weather response: {e}")))?;
 
     let condition = WeatherCondition::from_wmo_code(response.current.weather_code);
-    
+
     let weather_data = WeatherData {
         temperature: response.current.temperature_2m,
         feels_like: response.current.apparent_temperature,

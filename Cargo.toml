@@ -12,8 +12,8 @@ license = "MIT"
 repository = "https://github.com/yourusername/homelab-dashboard"
 
 [workspace.dependencies]
-# Leptos ecosystem
-leptos = { version = "0.8", features = ["csr", "ssr", "hydrate"] }
+# Leptos ecosystem (features enabled per-crate)
+leptos = { version = "0.8" }
 leptos_axum = "0.8"
 leptos_meta = "0.8"
 leptos_router = "0.8"
@@ -58,3 +58,47 @@ opt-level = 3
 
 [profile.dev.package.leptos]
 opt-level = 2
+
+# cargo-leptos configuration
+[[workspace.metadata.leptos]]
+# Name of the project (used for output file naming)
+name = "dashboard"
+
+# The package in the workspace that contains the server binary
+bin-package = "dashboard-server"
+
+# The package in the workspace that contains the frontend code (compiled to WASM)
+lib-package = "dashboard-app"
+
+# The site root folder for static files (JS/WASM/CSS)
+site-root = "target/site"
+
+# The site-pkg-dir is the directory in the site root where WASM and JS are placed
+site-pkg-dir = "pkg"
+
+# Assets source directory
+assets-dir = "static"
+
+# The tailwind input file
+tailwind-input-file = "static/input.css"
+
+# The tailwind config file (optional, Tailwind v4 uses CSS-based config)
+# tailwind-config-file = "tailwind.config.js"
+
+# The IP and port the server serves on
+site-addr = "127.0.0.1:3000"
+
+# The port to use for automatic reload monitoring
+reload-port = 3001
+
+# Browser to open when starting (optional)
+# browserquery = "firefox"
+
+# Enables additional file hashing for the output files
+hash-files = true
+
+# Features to use when compiling the frontend WASM
+lib-features = ["hydrate"]
+
+# Default features for library
+lib-default-features = false

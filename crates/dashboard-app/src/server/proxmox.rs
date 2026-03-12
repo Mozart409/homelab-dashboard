@@ -1,41 +1,7 @@
 //! Proxmox VE API integration.
 
 use crate::types::{NodeStatus, ProxmoxNode, ProxmoxStatus, ProxmoxVm, VmStatus, VmType};
-use chrono::Utc;
 use leptos::prelude::*;
-use serde::Deserialize;
-
-// ============================================================================
-// Proxmox API Response Types
-// ============================================================================
-
-#[derive(Debug, Deserialize)]
-struct ProxmoxApiResponse<T> {
-    data: T,
-}
-
-#[derive(Debug, Deserialize)]
-struct ApiNode {
-    node: String,
-    status: String,
-    cpu: Option<f64>,
-    mem: Option<u64>,
-    maxmem: Option<u64>,
-    uptime: Option<u64>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ApiVm {
-    vmid: u32,
-    name: Option<String>,
-    #[serde(rename = "type")]
-    #[allow(dead_code)]
-    vm_type: Option<String>,
-    status: String,
-    cpu: Option<f64>,
-    mem: Option<u64>,
-    maxmem: Option<u64>,
-}
 
 // ============================================================================
 // Server Functions
@@ -45,9 +11,49 @@ struct ApiVm {
 #[server]
 #[allow(clippy::collapsible_if, clippy::too_many_lines)]
 pub async fn get_proxmox_status() -> Result<ProxmoxStatus, ServerFnError> {
+    use chrono::Utc;
+    use moka::future::Cache;
+    use serde::Deserialize;
     use std::sync::LazyLock;
     use std::time::Duration;
-    use moka::future::Cache;
+
+    #[derive(Debug, Deserialize)]
+    struct ProxmoxApiResponse<T> {
+        data: T,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct ApiNode {
+        node: String,
+        status: String,
+        cpu: Option<f64>,
+        mem: Option<u64>,
+        maxmem: Option<u64>,
+        uptime: Option<u64>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct ApiVm {
+        vmid: u32,
+        name: Option<String>,
+        #[serde(rename = "type")]
+        #[allow(dead_code)]
+        vm_type: Option<String>,
+        status: String,
+        cpu: Option<f64>,
+        mem: Option<u64>,
+        maxmem: Option<u64>,
+    }
+
+    fn parse_vm_status(status: &str) -> VmStatus {
+        match status {
+            "running" => VmStatus::Running,
+            "stopped" => VmStatus::Stopped,
+            "paused" => VmStatus::Paused,
+            "suspended" => VmStatus::Suspended,
+            _ => VmStatus::Unknown,
+        }
+    }
 
     // Cache for 30 seconds
     static PROXMOX_CACHE: LazyLock<Cache<(), ProxmoxStatus>> = LazyLock::new(|| {
@@ -166,14 +172,4 @@ pub async fn get_proxmox_status() -> Result<ProxmoxStatus, ServerFnError> {
 
     PROXMOX_CACHE.insert((), status.clone()).await;
     Ok(status)
-}
-
-fn parse_vm_status(status: &str) -> VmStatus {
-    match status {
-        "running" => VmStatus::Running,
-        "stopped" => VmStatus::Stopped,
-        "paused" => VmStatus::Paused,
-        "suspended" => VmStatus::Suspended,
-        _ => VmStatus::Unknown,
-    }
 }

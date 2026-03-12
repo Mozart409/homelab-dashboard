@@ -4,33 +4,7 @@
 //! Adjust the response types to match your actual API.
 
 use crate::types::{PinchflatStatus, PinchflatVideo};
-use chrono::{DateTime, Utc};
 use leptos::prelude::*;
-use serde::Deserialize;
-use ulid::Ulid;
-
-// ============================================================================
-// Pinchflat API Response Types (adjust to match your fork's API)
-// ============================================================================
-
-#[derive(Debug, Deserialize)]
-struct ApiVideo {
-    #[allow(dead_code)]
-    id: String,
-    title: String,
-    channel: String,
-    thumbnail_url: Option<String>,
-    duration_seconds: u32,
-    downloaded_at: DateTime<Utc>,
-    file_path: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct ApiStatus {
-    videos: Vec<ApiVideo>,
-    total_downloads: u64,
-    is_downloading: bool,
-}
 
 // ============================================================================
 // Server Functions
@@ -39,9 +13,31 @@ struct ApiStatus {
 /// Fetch recent downloads from Pinchflat.
 #[server]
 pub async fn get_pinchflat_status(limit: Option<usize>) -> Result<PinchflatStatus, ServerFnError> {
+    use chrono::{DateTime, Utc};
+    use moka::future::Cache;
+    use serde::Deserialize;
     use std::sync::LazyLock;
     use std::time::Duration;
-    use moka::future::Cache;
+    use ulid::Ulid;
+
+    #[derive(Debug, Deserialize)]
+    struct ApiVideo {
+        #[allow(dead_code)]
+        id: String,
+        title: String,
+        channel: String,
+        thumbnail_url: Option<String>,
+        duration_seconds: u32,
+        downloaded_at: DateTime<Utc>,
+        file_path: String,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct ApiStatus {
+        videos: Vec<ApiVideo>,
+        total_downloads: u64,
+        is_downloading: bool,
+    }
 
     // Shared cache across requests
     static PINCHFLAT_CACHE: LazyLock<Cache<usize, PinchflatStatus>> = LazyLock::new(|| {

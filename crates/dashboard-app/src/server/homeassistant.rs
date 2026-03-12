@@ -1,33 +1,7 @@
 //! Home Assistant API integration.
 
 use crate::types::{HomeAssistantEntity, HomeAssistantStatus};
-use chrono::{DateTime, Utc};
 use leptos::prelude::*;
-use serde::Deserialize;
-
-// ============================================================================
-// Home Assistant API Response Types
-// ============================================================================
-
-#[derive(Debug, Deserialize)]
-struct ApiConfig {
-    version: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct ApiState {
-    entity_id: String,
-    state: String,
-    attributes: StateAttributes,
-    last_changed: DateTime<Utc>,
-}
-
-#[derive(Debug, Deserialize)]
-struct StateAttributes {
-    friendly_name: Option<String>,
-    unit_of_measurement: Option<String>,
-    icon: Option<String>,
-}
 
 // ============================================================================
 // Server Functions
@@ -38,9 +12,31 @@ struct StateAttributes {
 pub async fn get_homeassistant_status(
     entity_ids: Vec<String>,
 ) -> Result<HomeAssistantStatus, ServerFnError> {
+    use chrono::{DateTime, Utc};
+    use moka::future::Cache;
+    use serde::Deserialize;
     use std::sync::LazyLock;
     use std::time::Duration;
-    use moka::future::Cache;
+
+    #[derive(Debug, Deserialize)]
+    struct ApiConfig {
+        version: String,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct ApiState {
+        entity_id: String,
+        state: String,
+        attributes: StateAttributes,
+        last_changed: DateTime<Utc>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct StateAttributes {
+        friendly_name: Option<String>,
+        unit_of_measurement: Option<String>,
+        icon: Option<String>,
+    }
 
     // Shared cache across requests
     static HA_CACHE: LazyLock<Cache<String, HomeAssistantStatus>> = LazyLock::new(|| {
@@ -118,13 +114,31 @@ pub async fn get_homeassistant_status(
 /// Fetch a single entity's state.
 #[server]
 pub async fn get_entity_state(entity_id: String) -> Result<HomeAssistantEntity, ServerFnError> {
+    use chrono::{DateTime, Utc};
+    use serde::Deserialize;
+
+    #[derive(Debug, Deserialize)]
+    struct ApiState {
+        entity_id: String,
+        state: String,
+        attributes: StateAttributes,
+        last_changed: DateTime<Utc>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct StateAttributes {
+        friendly_name: Option<String>,
+        unit_of_measurement: Option<String>,
+        icon: Option<String>,
+    }
+
     let base_url = std::env::var("HOMEASSISTANT_URL")
         .map_err(|_| ServerFnError::new("HOMEASSISTANT_URL not configured"))?;
     let token = std::env::var("HOMEASSISTANT_TOKEN")
         .map_err(|_| ServerFnError::new("HOMEASSISTANT_TOKEN not configured"))?;
 
     let client = reqwest::Client::new();
-    
+
     let state: ApiState = client
         .get(format!("{base_url}/api/states/{entity_id}"))
         .header("Authorization", format!("Bearer {token}"))

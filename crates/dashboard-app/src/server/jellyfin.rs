@@ -1,52 +1,7 @@
 //! Jellyfin media server API integration.
 
 use crate::types::{JellyfinItem, JellyfinItemType, JellyfinStatus};
-use chrono::{DateTime, Utc};
 use leptos::prelude::*;
-use serde::Deserialize;
-
-// ============================================================================
-// Jellyfin API Response Types
-// ============================================================================
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct SystemInfo {
-    server_name: String,
-    version: String,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct ItemsResponse {
-    items: Vec<ApiItem>,
-    #[allow(dead_code)]
-    total_record_count: u32,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct ApiItem {
-    id: String,
-    name: String,
-    #[serde(rename = "Type")]
-    item_type: String,
-    series_name: Option<String>,
-    image_tags: Option<ImageTags>,
-    date_created: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct ImageTags {
-    primary: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct SessionInfo {
-    // We only care about counting active sessions
-}
 
 // ============================================================================
 // Server Functions
@@ -55,9 +10,83 @@ struct SessionInfo {
 /// Fetch Jellyfin server status and recently added items.
 #[server]
 pub async fn get_jellyfin_status() -> Result<JellyfinStatus, ServerFnError> {
+    use chrono::{DateTime, Utc};
+    use moka::future::Cache;
+    use serde::Deserialize;
     use std::sync::LazyLock;
     use std::time::Duration;
-    use moka::future::Cache;
+
+    #[derive(Debug, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct SystemInfo {
+        server_name: String,
+        version: String,
+    }
+
+    #[derive(Debug, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct ItemsResponse {
+        items: Vec<ApiItem>,
+        #[allow(dead_code)]
+        total_record_count: u32,
+    }
+
+    #[derive(Debug, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct ApiItem {
+        id: String,
+        name: String,
+        #[serde(rename = "Type")]
+        item_type: String,
+        series_name: Option<String>,
+        image_tags: Option<ImageTags>,
+        date_created: Option<DateTime<Utc>>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct ImageTags {
+        primary: Option<String>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    #[serde(rename_all = "PascalCase")]
+    struct SessionInfo {
+        // We only care about counting active sessions
+    }
+
+    async fn fetch_item_count(
+        client: &reqwest::Client,
+        base_url: &str,
+        api_key: &str,
+        item_type: &str,
+    ) -> u32 {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "PascalCase")]
+        struct CountResponse {
+            total_record_count: u32,
+        }
+
+        let response = client
+            .get(format!("{base_url}/Items"))
+            .header("X-Emby-Token", api_key)
+            .query(&[
+                ("IncludeItemTypes", item_type),
+                ("Recursive", "true"),
+                ("Limit", "0"),
+            ])
+            .send()
+            .await;
+
+        match response {
+            Ok(r) => r
+                .json::<CountResponse>()
+                .await
+                .map(|c| c.total_record_count)
+                .unwrap_or(0),
+            Err(_) => 0,
+        }
+    }
 
     static JELLYFIN_CACHE: LazyLock<Cache<(), JellyfinStatus>> = LazyLock::new(|| {
         Cache::builder()
@@ -133,7 +162,10 @@ pub async fn get_jellyfin_status() -> Result<JellyfinStatus, ServerFnError> {
         .map(|item| {
             let image_url = item.image_tags.as_ref().and_then(|tags| {
                 tags.primary.as_ref().map(|_| {
-                    format!("{}/Items/{}/Images/Primary?maxHeight=200", base_url, item.id)
+                    format!(
+                        "{}/Items/{}/Images/Primary?maxHeight=200",
+                        base_url, item.id
+                    )
                 })
             });
 
@@ -167,35 +199,4 @@ pub async fn get_jellyfin_status() -> Result<JellyfinStatus, ServerFnError> {
 
     JELLYFIN_CACHE.insert((), status.clone()).await;
     Ok(status)
-}
-
-async fn fetch_item_count(
-    client: &reqwest::Client,
-    base_url: &str,
-    api_key: &str,
-    item_type: &str,
-) -> u32 {
-    #[derive(Deserialize)]
-    #[serde(rename_all = "PascalCase")]
-    struct CountResponse {
-        total_record_count: u32,
-    }
-
-    let response = client
-        .get(format!("{base_url}/Items"))
-        .header("X-Emby-Token", api_key)
-        .query(&[
-            ("IncludeItemTypes", item_type),
-            ("Recursive", "true"),
-            ("Limit", "0"),
-        ])
-        .send()
-        .await;
-
-    match response {
-        Ok(r) => r.json::<CountResponse>().await
-            .map(|c| c.total_record_count)
-            .unwrap_or(0),
-        Err(_) => 0,
-    }
 }
