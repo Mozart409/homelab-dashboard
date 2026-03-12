@@ -138,6 +138,9 @@
 
             # AI
             opencode
+
+            # CSS
+            tailwindcss_4
           ];
 
           shellHook = ''
