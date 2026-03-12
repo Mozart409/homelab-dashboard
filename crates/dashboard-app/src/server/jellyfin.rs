@@ -9,6 +9,7 @@ use leptos::prelude::*;
 
 /// Fetch Jellyfin server status and recently added items.
 #[server]
+#[allow(clippy::too_many_lines)]
 pub async fn get_jellyfin_status() -> Result<JellyfinStatus, ServerFnError> {
     use chrono::{DateTime, Utc};
     use moka::future::Cache;

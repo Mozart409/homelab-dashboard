@@ -1,3 +1,4 @@
+#![allow(clippy::multiple_crate_versions)]
 //! Homelab Dashboard Server
 //!
 //! Axum server that serves the Leptos application with SSR and hydration.
@@ -74,6 +75,7 @@ async fn main() -> Result<()> {
 
 /// HTML shell for SSR
 #[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::redundant_clone)]
 fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
@@ -181,15 +183,15 @@ fn default_listen_address() -> String {
     "0.0.0.0".to_string()
 }
 
-fn default_port() -> u16 {
+const fn default_port() -> u16 {
     8080
 }
 
-fn default_latitude() -> f64 {
+const fn default_latitude() -> f64 {
     52.52
 }
 
-fn default_longitude() -> f64 {
+const fn default_longitude() -> f64 {
     13.41
 }
 
@@ -197,7 +199,7 @@ fn default_location_name() -> String {
     "Berlin".to_string()
 }
 
-fn default_timeout() -> u64 {
+const fn default_timeout() -> u64 {
     5000
 }
 

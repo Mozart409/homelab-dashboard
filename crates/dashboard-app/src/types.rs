@@ -41,7 +41,7 @@ impl WeatherCondition {
     /// Convert WMO weather code to condition
     /// See: <https://open-meteo.com/en/docs#weathervariables>
     #[must_use]
-    pub fn from_wmo_code(code: u8) -> Self {
+    pub const fn from_wmo_code(code: u8) -> Self {
         match code {
             0 => Self::Clear,
             1..=3 => Self::PartlyCloudy,
@@ -55,7 +55,7 @@ impl WeatherCondition {
     }
 
     #[must_use]
-    pub fn icon(&self) -> &'static str {
+    pub const fn icon(&self) -> &'static str {
         match self {
             Self::Clear => "☀️",
             Self::PartlyCloudy => "⛅",

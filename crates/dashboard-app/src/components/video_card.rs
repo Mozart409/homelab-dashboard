@@ -1,8 +1,8 @@
 //! Pinchflat recent videos card component.
 
-use leptos::prelude::*;
 use crate::server::get_pinchflat_status;
 use crate::types::{PinchflatStatus, PinchflatVideo};
+use leptos::prelude::*;
 
 /// Displays recent downloads from Pinchflat.
 #[component]
@@ -77,6 +77,7 @@ fn VideoContent(status: PinchflatStatus) -> impl IntoView {
 }
 
 #[component]
+#[allow(clippy::redundant_clone)]
 fn VideoItem(video: PinchflatVideo) -> impl IntoView {
     let duration = format_duration(video.duration_seconds);
     let downloaded = video.downloaded_at.format("%b %d, %H:%M").to_string();
@@ -84,18 +85,15 @@ fn VideoItem(video: PinchflatVideo) -> impl IntoView {
     view! {
         <li class="flex gap-4">
             <div class="relative shrink-0 w-[120px] h-[68px] bg-bg-elevated rounded overflow-hidden">
-                {match &video.thumbnail_url {
-                    Some(url) => view! {
-                        <img class="w-full h-full object-cover" src={url.clone()} alt="" loading="lazy"/>
-                    }.into_any(),
-                    None => view! {
-                        <div class="flex items-center justify-center w-full h-full text-text-muted">
-                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M8 5v14l11-7z"/>
-                            </svg>
-                        </div>
-                    }.into_any(),
-                }}
+                {video.thumbnail_url.as_ref().map_or_else(|| view! {
+                    <div class="flex items-center justify-center w-full h-full text-text-muted">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                    </div>
+                }.into_any(), |url| view! {
+                    <img class="w-full h-full object-cover" src={url.clone()} alt="" loading="lazy"/>
+                }.into_any())}
                 <span class="absolute bottom-1 right-1 px-1 py-0.5 bg-black/80 rounded-sm font-mono text-[0.7rem] text-white">{duration}</span>
             </div>
             <div class="flex-1 min-w-0">

@@ -1,8 +1,8 @@
 //! Weather card component displaying current conditions from Open-Meteo.
 
-use leptos::prelude::*;
 use crate::server::get_weather;
 use crate::types::WeatherData;
+use leptos::prelude::*;
 
 /// Weather card configuration
 #[derive(Clone)]
@@ -19,9 +19,7 @@ pub fn WeatherCard(config: WeatherConfig) -> impl IntoView {
         || (),
         move |()| {
             let cfg = config.clone();
-            async move {
-                get_weather(cfg.latitude, cfg.longitude, cfg.location_name).await
-            }
+            async move { get_weather(cfg.latitude, cfg.longitude, cfg.location_name).await }
         },
     );
 
@@ -118,7 +116,7 @@ fn WeatherSkeleton() -> impl IntoView {
     }
 }
 
-fn wind_direction_to_cardinal(degrees: u16) -> &'static str {
+const fn wind_direction_to_cardinal(degrees: u16) -> &'static str {
     match degrees {
         0..=22 | 338..=360 => "N",
         23..=67 => "NE",

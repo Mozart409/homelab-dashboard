@@ -1,3 +1,4 @@
+#![allow(clippy::multiple_crate_versions)]
 //! Homelab Dashboard - Leptos Application
 //!
 //! A self-hosted dashboard for monitoring homelab services including:

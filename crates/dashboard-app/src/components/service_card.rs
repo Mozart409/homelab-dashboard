@@ -1,8 +1,10 @@
 //! Service status cards for Proxmox, Jellyfin, and Home Assistant.
 
+use crate::server::{get_homeassistant_status, get_jellyfin_status, get_proxmox_status};
+use crate::types::{
+    HomeAssistantStatus, JellyfinItemType, JellyfinStatus, NodeStatus, ProxmoxStatus, VmStatus,
+};
 use leptos::prelude::*;
-use crate::server::{get_proxmox_status, get_jellyfin_status, get_homeassistant_status};
-use crate::types::{HomeAssistantStatus, JellyfinItemType, JellyfinStatus, NodeStatus, ProxmoxStatus, VmStatus};
 
 // ============================================================================
 // Proxmox Card
@@ -10,10 +12,7 @@ use crate::types::{HomeAssistantStatus, JellyfinItemType, JellyfinStatus, NodeSt
 
 #[component]
 pub fn ProxmoxCard() -> impl IntoView {
-    let resource = Resource::new(
-        || (),
-        |()| async move { get_proxmox_status().await },
-    );
+    let resource = Resource::new(|| (), |()| async move { get_proxmox_status().await });
 
     view! {
         <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
@@ -46,7 +45,11 @@ pub fn ProxmoxCard() -> impl IntoView {
 #[component]
 #[allow(clippy::cast_possible_truncation)]
 fn ProxmoxContent(status: ProxmoxStatus) -> impl IntoView {
-    let running_vms = status.vms.iter().filter(|vm| vm.status == VmStatus::Running).count();
+    let running_vms = status
+        .vms
+        .iter()
+        .filter(|vm| vm.status == VmStatus::Running)
+        .count();
     let total_vms = status.vms.len();
 
     view! {
@@ -120,10 +123,7 @@ fn ProxmoxContent(status: ProxmoxStatus) -> impl IntoView {
 
 #[component]
 pub fn JellyfinCard() -> impl IntoView {
-    let resource = Resource::new(
-        || (),
-        |()| async move { get_jellyfin_status().await },
-    );
+    let resource = Resource::new(|| (), |()| async move { get_jellyfin_status().await });
 
     view! {
         <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
@@ -158,7 +158,7 @@ fn JellyfinContent(status: JellyfinStatus) -> impl IntoView {
     let recently_added = status.recently_added.clone();
     let items = recently_added.into_iter().take(3).collect::<Vec<_>>();
     let (items_signal, _) = signal(items);
-    
+
     view! {
         <div class="p-4">
             <div class="flex justify-between items-center mb-4">
@@ -184,7 +184,7 @@ fn JellyfinContent(status: JellyfinStatus) -> impl IntoView {
                 </div>
             </div>
 
-            <Show when=move || !items_signal.with_untracked(|items| items.is_empty())>
+            <Show when=move || !items_signal.with_untracked(Vec::is_empty)>
                 <div class="mb-4">
                     <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">"Recently Added"</h4>
                     <ul class="flex flex-col gap-1">
@@ -241,10 +241,8 @@ pub struct HomeAssistantConfig {
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn HomeAssistantCard(config: HomeAssistantConfig) -> impl IntoView {
-    let entity_ids = config.entity_ids.clone();
-    
     let resource = Resource::new(
-        move || entity_ids.clone(),
+        move || config.entity_ids.clone(),
         |ids| async move { get_homeassistant_status(ids).await },
     );
 
@@ -291,7 +289,6 @@ fn HomeAssistantContent(status: HomeAssistantStatus) -> impl IntoView {
                     children=move |entity| {
                         let border_color = match entity.state.to_lowercase().as_str() {
                             "on" | "home" | "open" | "playing" => "border-l-accent-green",
-                            "off" | "away" | "closed" | "idle" => "border-l-text-muted",
                             "unavailable" | "unknown" => "border-l-accent-red opacity-60",
                             _ => "border-l-text-muted",
                         };
@@ -306,7 +303,7 @@ fn HomeAssistantContent(status: HomeAssistantStatus) -> impl IntoView {
                                     {entity.icon.clone().unwrap_or_else(|| "📊".to_string())}
                                 </span>
                                 <div class="flex-1 min-w-0">
-                                    <span class="block text-xs text-text-muted truncate">{entity.friendly_name.clone()}</span>
+                                    <span class="block text-xs text-text-muted truncate">{move || entity.friendly_name.clone()}</span>
                                     <span class="block font-mono text-sm font-medium">{display_value}</span>
                                 </div>
                             </div>

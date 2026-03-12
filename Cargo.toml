@@ -9,7 +9,11 @@ name = "homelab-dashboard"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+description = "A homelab dashboard for monitoring services"
 repository = "https://github.com/yourusername/homelab-dashboard"
+readme = "README.md"
+keywords = ["dashboard", "homelab", "leptos"]
+categories = ["web-applications"]
 
 [workspace.dependencies]
 # Leptos ecosystem (features enabled per-crate)

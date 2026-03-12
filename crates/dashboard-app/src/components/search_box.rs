@@ -3,13 +3,14 @@
 //! This component performs searches directly from the browser to your
 //! self-hosted `SearXNG` instance, avoiding the need for a backend proxy.
 
+use crate::types::{SearchResponse, SearchResult};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use crate::types::{SearchResponse, SearchResult};
 
 /// A search box that queries `SearXNG` directly from the browser.
 #[component]
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::redundant_clone)]
 pub fn SearchBox(searxng_url: Signal<String>) -> impl IntoView {
     let (query, set_query) = signal(String::new());
     let (results, set_results) = signal(Vec::<SearchResult>::new());
@@ -20,7 +21,7 @@ pub fn SearchBox(searxng_url: Signal<String>) -> impl IntoView {
     // Perform search when user submits
     let on_search = move |ev: leptos::ev::SubmitEvent| {
         ev.prevent_default();
-        
+
         let q = query.get_untracked();
         if q.trim().is_empty() {
             return;
@@ -87,7 +88,7 @@ pub fn SearchBox(searxng_url: Signal<String>) -> impl IntoView {
             <Show when=move || show_results.with_untracked(|s| *s)>
                 <div class="absolute top-[calc(100%+0.25rem)] left-0 right-0 bg-bg-card border border-border rounded-lg shadow-lg max-h-[400px] overflow-y-auto z-[100]">
                     <Show
-                        when=move || error.with_untracked(|e| e.is_none())
+                        when=move || error.with_untracked(Option::is_none)
                         fallback=move || view! {
                             <div class="p-6 text-center text-accent-red">
                                 {move || error.get().unwrap_or_default()}
@@ -107,21 +108,16 @@ pub fn SearchBox(searxng_url: Signal<String>) -> impl IntoView {
                                     each=move || results.get()
                                     key=|result| result.url.clone()
                                     children=move |result| {
+                                        #[allow(clippy::redundant_clone)]
                                         let content = result.content.clone();
                                         view! {
                                             <li class="border-b border-border-subtle last:border-b-0">
                                                 <a href={result.url.clone()} target="_blank" rel="noopener" class="block p-4 no-underline transition-colors duration-150 hover:bg-bg-elevated">
                                                     <div class="text-accent-blue font-medium mb-1">{result.title.clone()}</div>
                                                     <div class="text-text-muted text-xs font-mono mb-1 truncate">{result.url.clone()}</div>
-                                                    {move || {
-                                                        if let Some(ref c) = content {
-                                                            view! {
-                                                                <div class="text-text-secondary text-sm leading-snug line-clamp-2">{c.clone()}</div>
-                                                            }.into_any()
-                                                        } else {
-                                                            ().into_any()
-                                                        }
-                                                    }}
+                                                    {content.as_ref().map_or_else(|| ().into_any(), |c| view! {
+                                                        <div class="text-text-secondary text-sm leading-snug line-clamp-2">{c.clone()}</div>
+                                                    }.into_any())}
                                                 </a>
                                             </li>
                                         }
@@ -142,7 +138,11 @@ pub fn SearchBox(searxng_url: Signal<String>) -> impl IntoView {
 async fn fetch_search_results(base_url: &str, query: &str) -> Result<SearchResponse, String> {
     use gloo_net::http::Request;
 
-    let url = format!("{}/search?q={}&format=json", base_url, urlencoding::encode(query));
+    let url = format!(
+        "{}/search?q={}&format=json",
+        base_url,
+        urlencoding::encode(query)
+    );
 
     let response = Request::get(&url)
         .send()
@@ -173,7 +173,7 @@ where
     #[cfg(target_arch = "wasm32")]
     {
         use wasm_bindgen::prelude::*;
-        
+
         let closure = Closure::once(f);
         let window = web_sys::window().unwrap();
         window
@@ -184,7 +184,7 @@ where
             .unwrap();
         closure.forget();
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     {
         let _ = (f, duration);

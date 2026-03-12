@@ -4,11 +4,12 @@ use crate::types::{HealthCheck, HealthOverview, HealthStatus};
 use leptos::prelude::*;
 
 // ============================================================================
-// Server Functions  
+// Server Functions
 // ============================================================================
 
 /// Perform health checks on all configured endpoints.
 #[server]
+#[allow(clippy::too_many_lines)]
 pub async fn get_health_overview() -> Result<HealthOverview, ServerFnError> {
     use chrono::Utc;
     use moka::future::Cache;
@@ -28,14 +29,11 @@ pub async fn get_health_overview() -> Result<HealthOverview, ServerFnError> {
         expected_status: Option<u16>,
     }
 
-    fn default_timeout() -> u64 {
+    const fn default_timeout() -> u64 {
         5000
     }
 
-    async fn check_endpoint(
-        client: &reqwest::Client,
-        config: HealthCheckConfig,
-    ) -> HealthCheck {
+    async fn check_endpoint(client: &reqwest::Client, config: HealthCheckConfig) -> HealthCheck {
         let id = Ulid::new();
         let start = Instant::now();
         let timeout = Duration::from_millis(config.timeout_ms);
