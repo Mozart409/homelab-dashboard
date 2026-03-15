@@ -3,6 +3,7 @@
 //! Uses the official Pinchflat API endpoints:
 //! - `/api/media/recent_downloads` for recent downloads
 //! - `/api/stats` for statistics
+//! - `/sources` for source/channel names
 
 use crate::types::{PinchflatStatus, PinchflatVideo};
 use leptos::prelude::*;
@@ -13,23 +14,30 @@ use leptos::prelude::*;
 
 /// Fetch recent downloads from Pinchflat.
 ///
-/// Uses the `/api/media/recent_downloads` and `/api/stats` endpoints.
+/// Uses the `/api/media/recent_downloads`, `/api/stats`, and `/sources` endpoints.
 #[server]
+#[allow(clippy::too_many_lines)]
 pub async fn get_pinchflat_status(limit: Option<u32>) -> Result<PinchflatStatus, ServerFnError> {
     use chrono::{DateTime, Utc};
     use moka::future::Cache;
     use serde::Deserialize;
+    use std::collections::HashMap;
     use std::sync::LazyLock;
     use std::time::Duration;
 
     // API response types matching Pinchflat's OpenAPI spec
 
-    /// Nested source object in media item response.
+    /// Source object from `/sources` endpoint.
     #[derive(Debug, Deserialize)]
     struct ApiSource {
+        id: i64,
         custom_name: String,
-        #[allow(dead_code)]
-        collection_name: String,
+    }
+
+    /// Response from `/sources`.
+    #[derive(Debug, Deserialize)]
+    struct SourcesResponse {
+        data: Vec<ApiSource>,
     }
 
     /// Media item from `/api/media/recent_downloads`.
@@ -39,8 +47,7 @@ pub async fn get_pinchflat_status(limit: Option<u32>) -> Result<PinchflatStatus,
         uuid: String,
         title: String,
         media_id: String,
-        #[serde(default)]
-        source: Option<ApiSource>,
+        source_id: i64,
         media_downloaded_at: Option<DateTime<Utc>>,
         uploaded_at: Option<DateTime<Utc>>,
     }
@@ -55,12 +62,6 @@ pub async fn get_pinchflat_status(limit: Option<u32>) -> Result<PinchflatStatus,
     #[derive(Debug, Deserialize)]
     struct StatsResponse {
         media_item_count: u64,
-        #[allow(dead_code)]
-        source_count: u64,
-        #[allow(dead_code)]
-        media_profile_count: u64,
-        #[allow(dead_code)]
-        total_download_size_bytes: u64,
     }
 
     // Shared cache across requests
@@ -68,6 +69,13 @@ pub async fn get_pinchflat_status(limit: Option<u32>) -> Result<PinchflatStatus,
         Cache::builder()
             .time_to_live(Duration::from_secs(60))
             .max_capacity(5)
+            .build()
+    });
+
+    // Cache for source names (longer TTL since they rarely change)
+    static SOURCES_CACHE: LazyLock<Cache<(), HashMap<i64, String>>> = LazyLock::new(|| {
+        Cache::builder()
+            .time_to_live(Duration::from_secs(300))
             .build()
     });
 
@@ -93,6 +101,29 @@ pub async fn get_pinchflat_status(limit: Option<u32>) -> Result<PinchflatStatus,
             req = req.header("Authorization", format!("Bearer {key}"));
         }
         req
+    };
+
+    // Fetch or use cached source names
+    let source_names: HashMap<i64, String> = if let Some(cached) = SOURCES_CACHE.get(&()).await {
+        cached
+    } else {
+        let sources_url = format!("{base_url}/sources");
+        let sources_response: SourcesResponse = build_request(sources_url)
+            .send()
+            .await
+            .map_err(|e| ServerFnError::new(format!("Failed to fetch sources: {e}")))?
+            .json()
+            .await
+            .map_err(|e| ServerFnError::new(format!("Failed to parse sources: {e}")))?;
+
+        let map: HashMap<i64, String> = sources_response
+            .data
+            .into_iter()
+            .map(|s| (s.id, s.custom_name))
+            .collect();
+
+        SOURCES_CACHE.insert((), map.clone()).await;
+        map
     };
 
     // Fetch recent downloads
@@ -123,9 +154,10 @@ pub async fn get_pinchflat_status(limit: Option<u32>) -> Result<PinchflatStatus,
             uuid: item.uuid,
             title: item.title,
             media_id: item.media_id,
-            channel: item
-                .source
-                .map_or_else(|| "Unknown".to_string(), |s| s.custom_name),
+            channel: source_names
+                .get(&item.source_id)
+                .cloned()
+                .unwrap_or_else(|| "Unknown".to_string()),
             downloaded_at: item.media_downloaded_at,
             uploaded_at: item.uploaded_at,
         })
