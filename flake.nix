@@ -169,10 +169,15 @@
 
             # CSS
             tailwindcss_4
+
+            # Browser testing
+            playwright-driver.browsers
           ];
 
           shellHook = ''
             lefthook install
+            export PLAYWRIGHT_BROWSERS_PATH=${pkgs.playwright-driver.browsers}
+            export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
             echo "🏠 Homelab Dashboard Development Shell"
             echo ""
             echo "Commands:"
