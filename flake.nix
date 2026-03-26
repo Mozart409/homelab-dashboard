@@ -32,7 +32,7 @@
         };
 
         # Rust toolchain with WASM target
-        rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+        rustToolchain = pkgs.rust-bin.stable."1.94.0".default.override {
           targets = ["wasm32-unknown-unknown"];
         };
 
