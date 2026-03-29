@@ -7,7 +7,7 @@ pre-commit:
       stage_fixed: true
     cargo_clippy:
       glob: "*.rs"
-      run: cargo clippy --fix --allow-dirty -- -W clippy::pedantic -W clippy::cargo -W clippy::nursery -A warnings
+      run: cargo clippy --fix --allow-dirty -- -W clippy::pedantic -W clippy::cargo -W clippy::nursery -D warnings
       stage_fixed: true
     build:
       glob: "*.rs"
