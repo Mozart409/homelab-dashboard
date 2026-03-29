@@ -1,15 +1,15 @@
-//! Pinchflat recent videos card component.
+//! Hofvarpnir recent videos card component.
 
-use crate::server::get_pinchflat_status;
-use crate::types::{PinchflatStatus, PinchflatVideo};
+use crate::server::get_hofvarpnir_status;
+use crate::types::{HofvarpnirStatus, HofvarpnirVideo};
 use leptos::prelude::*;
 
-/// Displays recent downloads from Pinchflat.
+/// Displays recent downloads from Hofvarpnir.
 #[component]
 pub fn VideoCard() -> impl IntoView {
     let videos_resource = Resource::new(
         || (),
-        |()| async move { get_pinchflat_status(Some(3)).await },
+        |()| async move { get_hofvarpnir_status(Some(3)).await },
     );
 
     view! {
@@ -48,7 +48,7 @@ pub fn VideoCard() -> impl IntoView {
 }
 
 #[component]
-fn VideoContent(status: PinchflatStatus) -> impl IntoView {
+fn VideoContent(status: HofvarpnirStatus) -> impl IntoView {
     let videos = status.videos.clone();
     let is_empty = videos.is_empty();
 
@@ -63,7 +63,7 @@ fn VideoContent(status: PinchflatStatus) -> impl IntoView {
             <ul class="flex flex-col gap-4">
                 <For
                     each=move || videos.clone()
-                    key=|video| video.id
+                    key=|video| video.id.clone()
                     children=move |video| {
                         view! { <VideoItem video=video/> }
                     }
@@ -79,15 +79,19 @@ fn VideoContent(status: PinchflatStatus) -> impl IntoView {
 }
 
 #[component]
-fn VideoItem(video: PinchflatVideo) -> impl IntoView {
+fn VideoItem(video: HofvarpnirVideo) -> impl IntoView {
     let downloaded = video.downloaded_at.map_or_else(
         || "Unknown".to_string(),
         |dt| dt.format("%b %d, %H:%M").to_string(),
     );
 
-    // Construct YouTube thumbnail URL from the media_id (YouTube video ID)
-    // YouTube provides multiple thumbnail sizes - mqdefault is 320x180
-    let thumbnail_url = format!("https://i.ytimg.com/vi/{}/mqdefault.jpg", video.media_id);
+    // Use thumbnail_url from API, fall back to YouTube thumbnail from platform_video_id
+    let thumbnail_url = video.thumbnail_url.unwrap_or_else(|| {
+        format!(
+            "https://i.ytimg.com/vi/{}/mqdefault.jpg",
+            video.platform_video_id
+        )
+    });
 
     view! {
         <li class="flex gap-4">
@@ -108,7 +112,7 @@ fn VideoItem(video: PinchflatVideo) -> impl IntoView {
                 <div class="text-sm font-medium text-text-primary truncate mb-1" title={video.title.clone()}>
                     {video.title.clone()}
                 </div>
-                <div class="text-xs text-text-secondary mb-1">{video.channel}</div>
+                <div class="text-xs text-text-secondary mb-1">{video.platform.clone()}</div>
                 <div class="text-[0.7rem] text-text-muted font-mono">{downloaded}</div>
             </div>
         </li>

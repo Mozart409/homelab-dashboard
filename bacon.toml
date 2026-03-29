@@ -138,4 +138,4 @@ on_change_strategy = "kill_then_restart"
 # alt-m = "job:my-job"
 c = "job:clippy-all" # comment this to have 'c' run clippy on only the default target
 p = "job:pedantic"
-s = "job:css"
+t = "job:css"

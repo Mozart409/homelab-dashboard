@@ -71,34 +71,34 @@ impl WeatherCondition {
 }
 
 // ============================================================================
-// Pinchflat Types
+// Hofvarpnir Types
 // ============================================================================
 
-/// A media item from Pinchflat's `/api/media/recent_downloads` endpoint.
+/// A video from Hofvarpnir's `/api/v1/downloads` endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PinchflatVideo {
-    /// Internal database ID from Pinchflat.
-    pub id: i64,
-    /// UUID of the media item (used for streaming/thumbnail URLs).
-    pub uuid: String,
+pub struct HofvarpnirVideo {
+    /// Video ID (ULID).
+    pub id: String,
     /// Video title.
     pub title: String,
-    /// External media ID (e.g., `YouTube` video ID).
-    pub media_id: String,
-    /// Source/channel name (from the nested source object).
-    pub channel: String,
-    /// When the media was downloaded.
+    /// Platform video ID (e.g., `YouTube` video ID).
+    pub platform_video_id: String,
+    /// Platform name (e.g., "youtube").
+    pub platform: String,
+    /// Thumbnail URL provided by the API.
+    pub thumbnail_url: Option<String>,
+    /// When the video was downloaded.
     pub downloaded_at: Option<DateTime<Utc>>,
-    /// When the media was originally uploaded.
-    pub uploaded_at: Option<DateTime<Utc>>,
+    /// When the video was originally published.
+    pub published_at: Option<DateTime<Utc>>,
 }
 
-/// Aggregated Pinchflat status for the dashboard.
+/// Aggregated Hofvarpnir status for the dashboard.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PinchflatStatus {
+pub struct HofvarpnirStatus {
     /// Recent downloads.
-    pub videos: Vec<PinchflatVideo>,
-    /// Total number of downloaded media items.
+    pub videos: Vec<HofvarpnirVideo>,
+    /// Total number of completed downloads.
     pub total_downloads: u64,
     /// When this data was fetched.
     pub fetched_at: DateTime<Utc>,

@@ -29,6 +29,9 @@
         overlays = [(import rust-overlay)];
         pkgs = import nixpkgs {
           inherit system overlays;
+          config = {
+            allowUnfree = true;
+          };
         };
 
         # Rust toolchain with WASM target
@@ -166,6 +169,7 @@
 
             # AI
             opencode
+            claude-code
 
             # CSS
             tailwindcss_4

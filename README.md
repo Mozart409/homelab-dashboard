@@ -8,7 +8,7 @@ A self-hosted dashboard for monitoring homelab services, built with **Leptos** a
 
 - 🔍 **SearXNG Integration** - Search the web via your self-hosted instance
 - 🌤️ **Weather** - Current conditions from Open-Meteo (free, no API key)
-- 📺 **Pinchflat** - Recent video downloads (requires your custom API fork)
+- 📺 **Hofvarpnir** - Recent video downloads from your archival system
 - 🖥️ **Proxmox** - Node and VM status overview
 - 🎬 **Jellyfin** - Media library stats and active streams
 - 🏠 **Home Assistant** - Entity states and sensors
@@ -111,7 +111,7 @@ cargo leptos build --release
 
               jellyfin.url = "https://jellyfin.local";
               homeassistant.url = "https://ha.local";
-              pinchflat.url = "https://pinchflat.local";
+              hofvarpnir.url = "https://hofvarpnir.local";
 
               health_checks = [
                 { name = "Router"; url = "http://192.168.1.1"; }
@@ -139,7 +139,7 @@ Create `/run/secrets/dashboard-env` (or use sops-nix/agenix):
 PROXMOX_TOKEN_SECRET=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 JELLYFIN_API_KEY=your-jellyfin-api-key
 HOMEASSISTANT_TOKEN=your-long-lived-access-token
-PINCHFLAT_API_KEY=optional-api-key
+HOFVARPNIR_API_KEY=optional-api-key
 ```
 
 ## Configuration
@@ -172,31 +172,13 @@ See [config.example.toml](config.example.toml) for all options.
 1. Go to **Profile → Long-Lived Access Tokens → Create Token**
 2. Copy the token to config
 
-### Pinchflat
+### Hofvarpnir
 
-This dashboard expects a REST API that you'll need to implement in your Pinchflat fork.
+The dashboard integrates with the [Hofvarpnir](http://192.168.2.100:3000/docs) video archival system API.
 
-Expected endpoint: `GET /api/videos/recent?limit=3`
-
-Response format:
-
-```json
-{
-  "videos": [
-    {
-      "id": "abc123",
-      "title": "Video Title",
-      "channel": "Channel Name",
-      "thumbnail_url": "https://...",
-      "duration_seconds": 360,
-      "downloaded_at": "2024-01-15T10:30:00Z",
-      "file_path": "/downloads/video.mp4"
-    }
-  ],
-  "total_downloads": 150,
-  "is_downloading": false
-}
-```
+Used endpoints:
+- `GET /api/v1/downloads?status=Completed` — recent completed downloads
+- `GET /api/v1/system/status` — download statistics
 
 ## Development
 

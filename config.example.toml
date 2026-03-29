@@ -35,10 +35,10 @@ api_key = "your-jellyfin-api-key"
 url = "https://homeassistant.local"
 token = "your-home-assistant-token"
 
-# Pinchflat (your custom fork with REST API)
-[pinchflat]
-url = "https://pinchflat.local"
-api_key = "optional-api-key"  # If your fork requires auth
+# Hofvarpnir video archival system
+[hofvarpnir]
+url = "https://hofvarpnir.local"
+api_key = "optional-api-key"  # If auth is enabled
 
 # Health checks - monitor your services
 [[health_checks]]

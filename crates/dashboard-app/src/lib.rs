@@ -4,7 +4,7 @@
 //! A self-hosted dashboard for monitoring homelab services including:
 //! - `SearXNG` search integration
 //! - Weather from Open-Meteo
-//! - Pinchflat video downloads
+//! - Hofvarpnir video downloads
 //! - Proxmox VM status
 //! - Jellyfin media server
 //! - Home Assistant entities
