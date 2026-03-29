@@ -147,18 +147,18 @@ in {
             default = {};
           };
 
-          pinchflat = lib.mkOption {
+          hofvarpnir = lib.mkOption {
             type = lib.types.submodule {
               options = {
                 url = lib.mkOption {
                   type = lib.types.nullOr lib.types.str;
                   default = null;
-                  description = "Pinchflat URL.";
+                  description = "Hofvarpnir URL.";
                 };
                 api_key = lib.mkOption {
                   type = lib.types.nullOr lib.types.str;
                   default = null;
-                  description = "Pinchflat API key.";
+                  description = "Hofvarpnir API key.";
                 };
               };
             };

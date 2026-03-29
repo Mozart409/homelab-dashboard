@@ -117,7 +117,7 @@ struct ServerConfig {
     #[serde(default)]
     homeassistant: HomeAssistantConfig,
     #[serde(default)]
-    pinchflat: PinchflatConfig,
+    hofvarpnir: HofvarpnirConfig,
     #[serde(default)]
     health_checks: Vec<HealthCheckConfig>,
 }
@@ -167,7 +167,7 @@ struct HomeAssistantConfig {
 }
 
 #[derive(Debug, Default, serde::Deserialize)]
-struct PinchflatConfig {
+struct HofvarpnirConfig {
     url: Option<String>,
     api_key: Option<String>,
 }
@@ -282,15 +282,15 @@ fn apply_config_to_env(config: &ServerConfig) {
         }
     }
 
-    // Pinchflat
-    if let Some(url) = &config.pinchflat.url {
+    // Hofvarpnir
+    if let Some(url) = &config.hofvarpnir.url {
         unsafe {
-            std::env::set_var("PINCHFLAT_URL", url);
+            std::env::set_var("HOFVARPNIR_URL", url);
         }
     }
-    if let Some(api_key) = &config.pinchflat.api_key {
+    if let Some(api_key) = &config.hofvarpnir.api_key {
         unsafe {
-            std::env::set_var("PINCHFLAT_API_KEY", api_key);
+            std::env::set_var("HOFVARPNIR_API_KEY", api_key);
         }
     }
 
