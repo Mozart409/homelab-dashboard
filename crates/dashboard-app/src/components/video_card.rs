@@ -112,7 +112,7 @@ fn VideoItem(video: HofvarpnirVideo) -> impl IntoView {
                 <div class="text-sm font-medium text-text-primary truncate mb-1" title={video.title.clone()}>
                     {video.title.clone()}
                 </div>
-                <div class="text-xs text-text-secondary mb-1">{video.platform.clone()}</div>
+                <div class="text-xs text-text-secondary mb-1">{video.platform}</div>
                 <div class="text-[0.7rem] text-text-muted font-mono">{downloaded}</div>
             </div>
         </li>
