@@ -142,6 +142,11 @@ in {
                   default = null;
                   description = "Home Assistant long-lived access token. Consider using secretFile instead.";
                 };
+                entity_ids = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  default = [];
+                  description = "Home Assistant entity IDs to display (empty shows all).";
+                };
               };
             };
             default = {};
@@ -235,6 +240,7 @@ in {
 
       environment = {
         RUST_LOG = "info,dashboard_server=debug,dashboard_app=debug";
+        DASHBOARD_STATIC_DIR = "${cfg.package}/share/dashboard";
       };
 
       serviceConfig = {

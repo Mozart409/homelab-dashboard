@@ -2,22 +2,17 @@
 //!
 //! Uses the Hofvarpnir API endpoints:
 //! - `/api/v1/downloads` for download listing
-//! - `/api/v1/sources` for source/channel names
 //! - `/api/v1/system/status` for statistics
 
 use crate::types::{HofvarpnirStatus, HofvarpnirVideo};
-use leptos::prelude::*;
-
-// ============================================================================
-// Server Functions
-// ============================================================================
+use color_eyre::eyre::{Result, WrapErr};
 
 /// Fetch recent downloads from Hofvarpnir.
 ///
-/// Uses the `/api/v1/downloads`, `/api/v1/sources`, and `/api/v1/system/status` endpoints.
-#[server]
+/// Uses the `/api/v1/downloads` and `/api/v1/system/status` endpoints.
+/// Cached for 60 seconds.
 #[allow(clippy::too_many_lines)]
-pub async fn get_hofvarpnir_status(limit: Option<u32>) -> Result<HofvarpnirStatus, ServerFnError> {
+pub async fn get_hofvarpnir_status(limit: Option<u32>) -> Result<HofvarpnirStatus> {
     use chrono::{DateTime, Utc};
     use moka::future::Cache;
     use serde::Deserialize;
@@ -52,7 +47,7 @@ pub async fn get_hofvarpnir_status(limit: Option<u32>) -> Result<HofvarpnirStatu
     // Shared cache across requests
     static HOFVARPNIR_CACHE: LazyLock<Cache<u32, HofvarpnirStatus>> = LazyLock::new(|| {
         Cache::builder()
-            .time_to_live(Duration::from_secs(60))
+            .time_to_live(Duration::from_mins(1))
             .max_capacity(5)
             .build()
     });
@@ -64,8 +59,7 @@ pub async fn get_hofvarpnir_status(limit: Option<u32>) -> Result<HofvarpnirStatu
         return Ok(cached);
     }
 
-    let base_url = std::env::var("HOFVARPNIR_URL")
-        .map_err(|_| ServerFnError::new("HOFVARPNIR_URL not configured"))?;
+    let base_url = std::env::var("HOFVARPNIR_URL").wrap_err("HOFVARPNIR_URL not configured")?;
 
     // Optional API key for authentication
     let api_key = std::env::var("HOFVARPNIR_API_KEY").ok();
@@ -86,13 +80,13 @@ pub async fn get_hofvarpnir_status(limit: Option<u32>) -> Result<HofvarpnirStatu
     let mut downloads: Vec<ApiVideo> = build_request(downloads_url)
         .send()
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to fetch downloads: {e}")))?
+        .wrap_err("Failed to fetch downloads")?
         .json()
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to parse downloads: {e}")))?;
+        .wrap_err("Failed to parse downloads")?;
 
     // Sort by downloaded_at descending, take the most recent N
-    downloads.sort_by(|a, b| b.downloaded_at.cmp(&a.downloaded_at));
+    downloads.sort_by_key(|d| std::cmp::Reverse(d.downloaded_at));
     downloads.truncate(limit as usize);
 
     // Fetch system status for total count
@@ -100,10 +94,10 @@ pub async fn get_hofvarpnir_status(limit: Option<u32>) -> Result<HofvarpnirStatu
     let system_status: SystemStatusResponse = build_request(status_url)
         .send()
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to fetch system status: {e}")))?
+        .wrap_err("Failed to fetch system status")?
         .json()
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to parse system status: {e}")))?;
+        .wrap_err("Failed to parse system status")?;
 
     let videos: Vec<HofvarpnirVideo> = downloads
         .into_iter()

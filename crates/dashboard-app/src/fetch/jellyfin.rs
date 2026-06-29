@@ -1,16 +1,12 @@
 //! Jellyfin media server API integration.
 
 use crate::types::{JellyfinItem, JellyfinItemType, JellyfinStatus};
-use leptos::prelude::*;
-
-// ============================================================================
-// Server Functions
-// ============================================================================
+use color_eyre::eyre::{Result, WrapErr};
 
 /// Fetch Jellyfin server status and recently added items.
-#[server]
+/// Cached for 60 seconds.
 #[allow(clippy::too_many_lines)]
-pub async fn get_jellyfin_status() -> Result<JellyfinStatus, ServerFnError> {
+pub async fn get_jellyfin_status() -> Result<JellyfinStatus> {
     use chrono::{DateTime, Utc};
     use moka::future::Cache;
     use serde::Deserialize;
@@ -83,15 +79,14 @@ pub async fn get_jellyfin_status() -> Result<JellyfinStatus, ServerFnError> {
             Ok(r) => r
                 .json::<CountResponse>()
                 .await
-                .map(|c| c.total_record_count)
-                .unwrap_or(0),
+                .map_or(0, |c| c.total_record_count),
             Err(_) => 0,
         }
     }
 
     static JELLYFIN_CACHE: LazyLock<Cache<(), JellyfinStatus>> = LazyLock::new(|| {
         Cache::builder()
-            .time_to_live(Duration::from_secs(60))
+            .time_to_live(Duration::from_mins(1))
             .max_capacity(1)
             .build()
     });
@@ -101,10 +96,8 @@ pub async fn get_jellyfin_status() -> Result<JellyfinStatus, ServerFnError> {
         return Ok(cached);
     }
 
-    let base_url = std::env::var("JELLYFIN_URL")
-        .map_err(|_| ServerFnError::new("JELLYFIN_URL not configured"))?;
-    let api_key = std::env::var("JELLYFIN_API_KEY")
-        .map_err(|_| ServerFnError::new("JELLYFIN_API_KEY not configured"))?;
+    let base_url = std::env::var("JELLYFIN_URL").wrap_err("JELLYFIN_URL not configured")?;
+    let api_key = std::env::var("JELLYFIN_API_KEY").wrap_err("JELLYFIN_API_KEY not configured")?;
 
     let client = reqwest::Client::new();
 
@@ -114,10 +107,10 @@ pub async fn get_jellyfin_status() -> Result<JellyfinStatus, ServerFnError> {
         .header("X-Emby-Token", &api_key)
         .send()
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to fetch Jellyfin system info: {e}")))?
+        .wrap_err("Failed to fetch Jellyfin system info")?
         .json()
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to parse Jellyfin system info: {e}")))?;
+        .wrap_err("Failed to parse Jellyfin system info")?;
 
     // Fetch active sessions count
     let sessions_response = client

@@ -1,25 +1,58 @@
 #![allow(clippy::multiple_crate_versions)]
 //! Homelab Dashboard Server
 //!
-//! Axum server that serves the Leptos application with SSR and hydration.
+//! Axum server that renders the dashboard with Maud and drives htmx over a
+//! shared Server-Sent Events stream. Each card is delivered two ways: pushed
+//! over `/events` (swapped by event name) and served from `/card/{id}` for
+//! manual refresh. Search is proxied to `SearXNG` via `/search`.
+
+use std::convert::Infallible;
+use std::net::SocketAddr;
+use std::time::Duration;
 
 use axum::Router;
+use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
+use axum::response::sse::{Event, KeepAlive, Sse};
+use axum::response::{IntoResponse, Response};
+use axum::routing::get;
 use color_eyre::eyre::Result;
-use leptos::prelude::*;
-use leptos_axum::{LeptosRoutes, generate_route_list};
-use std::net::SocketAddr;
+use futures::Stream;
+use maud::Markup;
 use tower_http::compression::CompressionLayer;
+use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
-use dashboard_app::App;
+use dashboard_app::DashboardConfig;
+use dashboard_app::fetch::search;
+use dashboard_app::views;
+
+/// How often the shared SSE stream re-renders every card. Per-service `moka`
+/// caches dedupe upstream calls, so this can stay snappy.
+const SSE_INTERVAL: Duration = Duration::from_secs(15);
+
+/// Card ids in display order. Each doubles as the SSE event name and the
+/// `/card/{id}` route segment.
+const CARD_IDS: [&str; 6] = [
+    "weather",
+    "video",
+    "proxmox",
+    "jellyfin",
+    "homeassistant",
+    "health",
+];
+
+/// Shared handler state: the display config the fetchers need per render.
+#[derive(Clone)]
+struct AppState {
+    config: DashboardConfig,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize error handling
     color_eyre::install()?;
 
-    // Initialize tracing
     tracing_subscriber::registry()
         .with(
             EnvFilter::try_from_default_env().unwrap_or_else(|_| {
@@ -29,45 +62,45 @@ async fn main() -> Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    // Load configuration
     let config = load_config()?;
 
-    // Log configuration (without secrets)
     tracing::info!(
         "Starting dashboard server on {}:{}",
         config.listen_address,
         config.port
     );
 
-    // Set environment variables for server functions
+    let addr = SocketAddr::new(config.listen_address.parse()?, config.port);
+
+    // Service URLs and secrets are consumed by the fetchers from the
+    // environment; push the loaded config through before any handler runs.
     apply_config_to_env(&config);
 
-    // Get Leptos configuration
-    let leptos_options = LeptosOptions::builder()
-        .output_name("dashboard")
-        .site_root("target/site")
-        .site_pkg_dir("pkg")
-        .site_addr(SocketAddr::new(config.listen_address.parse()?, config.port))
-        .build();
+    let state = AppState {
+        config: DashboardConfig {
+            latitude: config.weather.latitude,
+            longitude: config.weather.longitude,
+            location_name: config.weather.location.clone(),
+            searxng_url: config.searxng.url.clone(),
+            ha_entity_ids: config.homeassistant.entity_ids.clone(),
+        },
+    };
 
-    // Generate routes from the app
-    let routes = generate_route_list(App);
+    // Static assets (compiled dashboard.css, etc.). Defaults to ./static for
+    // local dev; the Nix package points this at its share directory.
+    let static_dir = std::env::var("DASHBOARD_STATIC_DIR").unwrap_or_else(|_| "static".to_string());
 
-    // Build the Axum router
     let app = Router::new()
-        .leptos_routes(&leptos_options, routes, {
-            let leptos_options = leptos_options.clone();
-            move || shell(leptos_options.clone())
-        })
-        .fallback(leptos_axum::file_and_error_handler(shell))
+        .route("/", get(index))
+        .route("/events", get(events))
+        .route("/card/{id}", get(card))
+        .route("/search", get(search_handler))
+        .fallback_service(ServeDir::new(static_dir))
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())
-        .with_state(leptos_options);
+        .with_state(state);
 
-    // Start the server
-    let addr = SocketAddr::new(config.listen_address.parse()?, config.port);
     let listener = tokio::net::TcpListener::bind(addr).await?;
-
     tracing::info!("Dashboard available at http://{}", addr);
 
     axum::serve(listener, app.into_make_service()).await?;
@@ -75,24 +108,74 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-/// HTML shell for SSR
-#[allow(clippy::needless_pass_by_value)]
-#[allow(clippy::redundant_clone)]
-fn shell(options: LeptosOptions) -> impl IntoView {
-    view! {
-        <!DOCTYPE html>
-        <html lang="en">
-            <head>
-                <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1"/>
-                <AutoReload options=options.clone()/>
-                <HydrationScripts options=options.clone()/>
-            </head>
-            <body>
-                <App/>
-            </body>
-        </html>
+/// The full dashboard page (skeleton cards until the first SSE frame).
+async fn index(State(state): State<AppState>) -> Markup {
+    views::page(&state.config)
+}
+
+/// A single card partial for manual refresh; 404 for unknown ids.
+async fn card(State(state): State<AppState>, Path(id): Path<String>) -> Response {
+    match render_card(&state.config, &id).await {
+        Some(markup) => markup.into_response(),
+        None => (StatusCode::NOT_FOUND, "unknown card").into_response(),
     }
+}
+
+/// Shared SSE stream: pushes every card on connect, then every [`SSE_INTERVAL`].
+async fn events(
+    State(state): State<AppState>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let cfg = state.config;
+
+    let stream = async_stream::stream! {
+        loop {
+            for id in CARD_IDS {
+                if let Some(markup) = render_card(&cfg, id).await {
+                    yield Ok(Event::default().event(id).data(markup.into_string()));
+                }
+            }
+            tokio::time::sleep(SSE_INTERVAL).await;
+        }
+    };
+
+    Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+/// Proxy a search query to `SearXNG` and render the results dropdown.
+async fn search_handler(
+    State(state): State<AppState>,
+    Query(params): Query<SearchParams>,
+) -> Markup {
+    let query = params.q.unwrap_or_default();
+
+    if query.trim().is_empty() {
+        return views::search_results(&query, &[]);
+    }
+
+    match search(state.config.searxng_url.as_deref(), &query).await {
+        Ok(response) => views::search_results(&query, &response.results),
+        Err(e) => views::search_error(&e.to_string()),
+    }
+}
+
+/// Query string for `/search`.
+#[derive(Debug, serde::Deserialize)]
+struct SearchParams {
+    q: Option<String>,
+}
+
+/// Render the inner partial for a card by id (`None` if the id is unknown).
+async fn render_card(cfg: &DashboardConfig, id: &str) -> Option<Markup> {
+    let markup = match id {
+        "weather" => views::weather_card(cfg).await,
+        "video" => views::video_card().await,
+        "proxmox" => views::proxmox_card().await,
+        "jellyfin" => views::jellyfin_card().await,
+        "homeassistant" => views::homeassistant_card(cfg).await,
+        "health" => views::health_card().await,
+        _ => return None,
+    };
+    Some(markup)
 }
 
 // ============================================================================
@@ -164,6 +247,8 @@ struct JellyfinConfig {
 struct HomeAssistantConfig {
     url: Option<String>,
     token: Option<String>,
+    #[serde(default)]
+    entity_ids: Vec<String>,
 }
 
 #[derive(Debug, Default, serde::Deserialize)]
@@ -209,13 +294,10 @@ fn load_config() -> Result<ServerConfig> {
     use config::{Config, Environment, File};
 
     let config = Config::builder()
-        // Start with defaults
         .set_default("listen_address", "0.0.0.0")?
         .set_default("port", 8080)?
-        // Load from config file if present
         .add_source(File::with_name("config").required(false))
         .add_source(File::with_name("/etc/homelab-dashboard/config").required(false))
-        // Override with environment variables
         .add_source(
             Environment::with_prefix("DASHBOARD")
                 .separator("__")
@@ -226,80 +308,57 @@ fn load_config() -> Result<ServerConfig> {
     Ok(config.try_deserialize()?)
 }
 
+/// Push service URLs and secrets into the environment for the fetchers to read.
 fn apply_config_to_env(config: &ServerConfig) {
-    // SearXNG
+    /// Set an env var (the `config` crate already validated these values).
+    fn set(key: &str, value: &str) {
+        unsafe {
+            std::env::set_var(key, value);
+        }
+    }
+
     if let Some(url) = &config.searxng.url {
-        unsafe {
-            std::env::set_var("SEARXNG_URL", url);
-        }
+        set("SEARXNG_URL", url);
     }
 
-    // Weather
-    unsafe {
-        std::env::set_var("WEATHER_LAT", config.weather.latitude.to_string());
-        std::env::set_var("WEATHER_LON", config.weather.longitude.to_string());
-        std::env::set_var("WEATHER_LOCATION", &config.weather.location);
-    }
+    set("WEATHER_LAT", &config.weather.latitude.to_string());
+    set("WEATHER_LON", &config.weather.longitude.to_string());
+    set("WEATHER_LOCATION", &config.weather.location);
 
-    // Proxmox
     if let Some(url) = &config.proxmox.url {
-        unsafe {
-            std::env::set_var("PROXMOX_URL", url);
-        }
+        set("PROXMOX_URL", url);
     }
     if let Some(token_id) = &config.proxmox.token_id {
-        unsafe {
-            std::env::set_var("PROXMOX_TOKEN_ID", token_id);
-        }
+        set("PROXMOX_TOKEN_ID", token_id);
     }
     if let Some(token_secret) = &config.proxmox.token_secret {
-        unsafe {
-            std::env::set_var("PROXMOX_TOKEN_SECRET", token_secret);
-        }
+        set("PROXMOX_TOKEN_SECRET", token_secret);
     }
 
-    // Jellyfin
     if let Some(url) = &config.jellyfin.url {
-        unsafe {
-            std::env::set_var("JELLYFIN_URL", url);
-        }
+        set("JELLYFIN_URL", url);
     }
     if let Some(api_key) = &config.jellyfin.api_key {
-        unsafe {
-            std::env::set_var("JELLYFIN_API_KEY", api_key);
-        }
+        set("JELLYFIN_API_KEY", api_key);
     }
 
-    // Home Assistant
     if let Some(url) = &config.homeassistant.url {
-        unsafe {
-            std::env::set_var("HOMEASSISTANT_URL", url);
-        }
+        set("HOMEASSISTANT_URL", url);
     }
     if let Some(token) = &config.homeassistant.token {
-        unsafe {
-            std::env::set_var("HOMEASSISTANT_TOKEN", token);
-        }
+        set("HOMEASSISTANT_TOKEN", token);
     }
 
-    // Hofvarpnir
     if let Some(url) = &config.hofvarpnir.url {
-        unsafe {
-            std::env::set_var("HOFVARPNIR_URL", url);
-        }
+        set("HOFVARPNIR_URL", url);
     }
     if let Some(api_key) = &config.hofvarpnir.api_key {
-        unsafe {
-            std::env::set_var("HOFVARPNIR_API_KEY", api_key);
-        }
+        set("HOFVARPNIR_API_KEY", api_key);
     }
 
-    // Health checks as JSON
     if !config.health_checks.is_empty()
         && let Ok(json) = serde_json::to_string(&config.health_checks)
     {
-        unsafe {
-            std::env::set_var("HEALTH_CHECKS", json);
-        }
+        set("HEALTH_CHECKS", json.as_str());
     }
 }

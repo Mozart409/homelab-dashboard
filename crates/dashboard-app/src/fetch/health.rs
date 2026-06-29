@@ -1,16 +1,14 @@
 //! Custom health check aggregator.
 
 use crate::types::{HealthCheck, HealthOverview, HealthStatus};
-use leptos::prelude::*;
-
-// ============================================================================
-// Server Functions
-// ============================================================================
+use color_eyre::eyre::{Result, WrapErr};
 
 /// Perform health checks on all configured endpoints.
-#[server]
+///
+/// Reads the check configuration from the `HEALTH_CHECKS` environment variable
+/// (a JSON array). Cached for 15 seconds.
 #[allow(clippy::too_many_lines)]
-pub async fn get_health_overview() -> Result<HealthOverview, ServerFnError> {
+pub async fn get_health_overview() -> Result<HealthOverview> {
     use chrono::Utc;
     use moka::future::Cache;
     use serde::Deserialize;
@@ -99,13 +97,13 @@ pub async fn get_health_overview() -> Result<HealthOverview, ServerFnError> {
     // Load health check configs from environment
     let checks_json = std::env::var("HEALTH_CHECKS").unwrap_or_else(|_| "[]".to_string());
 
-    let configs: Vec<HealthCheckConfig> = serde_json::from_str(&checks_json)
-        .map_err(|e| ServerFnError::new(format!("Invalid HEALTH_CHECKS config: {e}")))?;
+    let configs: Vec<HealthCheckConfig> =
+        serde_json::from_str(&checks_json).wrap_err("Invalid HEALTH_CHECKS config")?;
 
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
-        .map_err(|e| ServerFnError::new(format!("Failed to create HTTP client: {e}")))?;
+        .wrap_err("Failed to create HTTP client")?;
 
     // Run all health checks in parallel
     let checks: Vec<HealthCheck> = futures::future::join_all(configs.into_iter().map(|config| {
@@ -132,69 +130,4 @@ pub async fn get_health_overview() -> Result<HealthOverview, ServerFnError> {
 
     HEALTH_CACHE.insert((), overview.clone()).await;
     Ok(overview)
-}
-
-/// Check a single endpoint (for manual refresh).
-#[server]
-pub async fn check_single_endpoint(
-    name: String,
-    url: String,
-) -> Result<HealthCheck, ServerFnError> {
-    use chrono::Utc;
-    use std::time::Duration;
-    use tokio::time::Instant;
-    use ulid::Ulid;
-
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .build()
-        .map_err(|e| ServerFnError::new(format!("Failed to create HTTP client: {e}")))?;
-
-    let id = Ulid::new();
-    let start = Instant::now();
-    let timeout = Duration::from_millis(5000);
-
-    let result = tokio::time::timeout(timeout, client.get(&url).send()).await;
-
-    let (status, response_time_ms, error_message) = match result {
-        Ok(Ok(response)) => {
-            #[allow(clippy::cast_possible_truncation)]
-            let elapsed = start.elapsed().as_millis() as u32;
-            let expected = 200u16;
-
-            if response.status().as_u16() == expected {
-                (HealthStatus::Healthy, Some(elapsed), None)
-            } else {
-                (
-                    HealthStatus::Degraded,
-                    Some(elapsed),
-                    Some(format!("Expected {}, got {}", expected, response.status())),
-                )
-            }
-        }
-        Ok(Err(e)) => {
-            #[allow(clippy::cast_possible_truncation)]
-            let elapsed = start.elapsed().as_millis() as u32;
-            (
-                HealthStatus::Unhealthy,
-                Some(elapsed),
-                Some(format!("Request failed: {e}")),
-            )
-        }
-        Err(_) => (
-            HealthStatus::Unhealthy,
-            None,
-            Some("Timeout after 5000ms".to_string()),
-        ),
-    };
-
-    Ok(HealthCheck {
-        id,
-        name,
-        url,
-        status,
-        response_time_ms,
-        last_checked: Utc::now(),
-        error_message,
-    })
 }

@@ -8,27 +8,28 @@ name = "homelab-dashboard"
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
+publish = false
 license = "MIT"
 description = "A homelab dashboard for monitoring services"
 repository = "https://github.com/yourusername/homelab-dashboard"
 readme = "README.md"
-keywords = ["dashboard", "homelab", "leptos"]
+keywords = ["dashboard", "homelab", "axum", "htmx", "maud"]
 categories = ["web-applications"]
 
 [workspace.dependencies]
-# Leptos ecosystem (features enabled per-crate)
-leptos = { version = "0.8" }
-leptos_axum = "0.8"
-leptos_meta = "0.8"
-leptos_router = "0.8"
+# HTML templating
+maud = { version = "0.27", features = ["axum"] }
 
 # Axum & tower
 axum = { version = "0.8", features = ["macros"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["fs", "cors", "trace", "compression-gzip"] }
 
-# Async runtime
+# Async runtime & streams
 tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+async-stream = "0.3"
+futures = "0.3"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
@@ -55,54 +56,10 @@ chrono = { version = "0.4", features = ["serde"] }
 # Caching
 moka = { version = "0.12", features = ["future"] }
 
+# URL encoding (search query proxying)
+urlencoding = "2.1"
+
 [profile.release]
 lto = true
 codegen-units = 1
 opt-level = 3
-
-[profile.dev.package.leptos]
-opt-level = 2
-
-# cargo-leptos configuration
-[[workspace.metadata.leptos]]
-# Name of the project (used for output file naming)
-name = "dashboard"
-
-# The package in the workspace that contains the server binary
-bin-package = "dashboard-server"
-
-# The package in the workspace that contains the frontend code (compiled to WASM)
-lib-package = "dashboard-app"
-
-# The site root folder for static files (JS/WASM/CSS)
-site-root = "target/site"
-
-# The site-pkg-dir is the directory in the site root where WASM and JS are placed
-site-pkg-dir = "pkg"
-
-# Assets source directory
-assets-dir = "static"
-
-# The tailwind input file
-tailwind-input-file = "static/input.css"
-
-# The tailwind config file (optional, Tailwind v4 uses CSS-based config)
-# tailwind-config-file = "tailwind.config.js"
-
-# The IP and port the server serves on
-site-addr = "127.0.0.1:8000"
-
-# The port to use for automatic reload monitoring
-reload-port = 8081
-
-# Browser to open when starting (optional)
-# browserquery = "firefox"
-
-# Enables additional file hashing for the output files
-hash-files = true
-
-# Features to use when compiling the frontend WASM
-lib-features = ["hydrate"]
-
-# Default features for library
-lib-default-features = false

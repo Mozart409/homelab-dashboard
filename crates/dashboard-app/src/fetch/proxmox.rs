@@ -1,16 +1,12 @@
 //! Proxmox VE API integration.
 
 use crate::types::{NodeStatus, ProxmoxNode, ProxmoxStatus, ProxmoxVm, VmStatus, VmType};
-use leptos::prelude::*;
-
-// ============================================================================
-// Server Functions
-// ============================================================================
+use color_eyre::eyre::{Result, WrapErr};
 
 /// Fetch Proxmox cluster status including nodes and VMs.
-#[server]
-#[allow(clippy::collapsible_if, clippy::too_many_lines)]
-pub async fn get_proxmox_status() -> Result<ProxmoxStatus, ServerFnError> {
+/// Cached for 30 seconds.
+#[allow(clippy::too_many_lines)]
+pub async fn get_proxmox_status() -> Result<ProxmoxStatus> {
     use chrono::Utc;
     use moka::future::Cache;
     use serde::Deserialize;
@@ -68,18 +64,16 @@ pub async fn get_proxmox_status() -> Result<ProxmoxStatus, ServerFnError> {
         return Ok(cached);
     }
 
-    // Get config from environment/state
-    let base_url = std::env::var("PROXMOX_URL")
-        .map_err(|_| ServerFnError::new("PROXMOX_URL not configured"))?;
-    let token_id = std::env::var("PROXMOX_TOKEN_ID")
-        .map_err(|_| ServerFnError::new("PROXMOX_TOKEN_ID not configured"))?;
-    let token_secret = std::env::var("PROXMOX_TOKEN_SECRET")
-        .map_err(|_| ServerFnError::new("PROXMOX_TOKEN_SECRET not configured"))?;
+    // Get config from environment
+    let base_url = std::env::var("PROXMOX_URL").wrap_err("PROXMOX_URL not configured")?;
+    let token_id = std::env::var("PROXMOX_TOKEN_ID").wrap_err("PROXMOX_TOKEN_ID not configured")?;
+    let token_secret =
+        std::env::var("PROXMOX_TOKEN_SECRET").wrap_err("PROXMOX_TOKEN_SECRET not configured")?;
 
     let client = reqwest::Client::builder()
         .danger_accept_invalid_certs(true) // Proxmox often uses self-signed certs
         .build()
-        .map_err(|e| ServerFnError::new(format!("Failed to create HTTP client: {e}")))?;
+        .wrap_err("Failed to create HTTP client")?;
 
     let auth_header = format!("PVEAPIToken={token_id}={token_secret}");
 
@@ -90,10 +84,10 @@ pub async fn get_proxmox_status() -> Result<ProxmoxStatus, ServerFnError> {
         .header("Authorization", &auth_header)
         .send()
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to fetch Proxmox nodes: {e}")))?
+        .wrap_err("Failed to fetch Proxmox nodes")?
         .json()
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to parse Proxmox nodes: {e}")))?;
+        .wrap_err("Failed to parse Proxmox nodes")?;
 
     let nodes: Vec<ProxmoxNode> = nodes_response
         .data
@@ -122,20 +116,19 @@ pub async fn get_proxmox_status() -> Result<ProxmoxStatus, ServerFnError> {
             .header("Authorization", &auth_header)
             .send()
             .await
+            && let Ok(qemu_response) = response.json::<ProxmoxApiResponse<Vec<ApiVm>>>().await
         {
-            if let Ok(qemu_response) = response.json::<ProxmoxApiResponse<Vec<ApiVm>>>().await {
-                for vm in qemu_response.data {
-                    vms.push(ProxmoxVm {
-                        vmid: vm.vmid,
-                        name: vm.name.unwrap_or_else(|| format!("VM {}", vm.vmid)),
-                        node: node.name.clone(),
-                        status: parse_vm_status(&vm.status),
-                        vm_type: VmType::Qemu,
-                        cpu_usage: vm.cpu.unwrap_or(0.0),
-                        memory_used: vm.mem.unwrap_or(0),
-                        memory_total: vm.maxmem.unwrap_or(0),
-                    });
-                }
+            for vm in qemu_response.data {
+                vms.push(ProxmoxVm {
+                    vmid: vm.vmid,
+                    name: vm.name.unwrap_or_else(|| format!("VM {}", vm.vmid)),
+                    node: node.name.clone(),
+                    status: parse_vm_status(&vm.status),
+                    vm_type: VmType::Qemu,
+                    cpu_usage: vm.cpu.unwrap_or(0.0),
+                    memory_used: vm.mem.unwrap_or(0),
+                    memory_total: vm.maxmem.unwrap_or(0),
+                });
             }
         }
 
@@ -146,20 +139,19 @@ pub async fn get_proxmox_status() -> Result<ProxmoxStatus, ServerFnError> {
             .header("Authorization", &auth_header)
             .send()
             .await
+            && let Ok(lxc_response) = response.json::<ProxmoxApiResponse<Vec<ApiVm>>>().await
         {
-            if let Ok(lxc_response) = response.json::<ProxmoxApiResponse<Vec<ApiVm>>>().await {
-                for vm in lxc_response.data {
-                    vms.push(ProxmoxVm {
-                        vmid: vm.vmid,
-                        name: vm.name.unwrap_or_else(|| format!("CT {}", vm.vmid)),
-                        node: node.name.clone(),
-                        status: parse_vm_status(&vm.status),
-                        vm_type: VmType::Lxc,
-                        cpu_usage: vm.cpu.unwrap_or(0.0),
-                        memory_used: vm.mem.unwrap_or(0),
-                        memory_total: vm.maxmem.unwrap_or(0),
-                    });
-                }
+            for vm in lxc_response.data {
+                vms.push(ProxmoxVm {
+                    vmid: vm.vmid,
+                    name: vm.name.unwrap_or_else(|| format!("CT {}", vm.vmid)),
+                    node: node.name.clone(),
+                    status: parse_vm_status(&vm.status),
+                    vm_type: VmType::Lxc,
+                    cpu_usage: vm.cpu.unwrap_or(0.0),
+                    memory_used: vm.mem.unwrap_or(0),
+                    memory_total: vm.maxmem.unwrap_or(0),
+                });
             }
         }
     }
