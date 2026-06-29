@@ -8,33 +8,16 @@ repository.workspace = true
 readme.workspace = true
 keywords.workspace = true
 categories.workspace = true
-
-[lib]
-crate-type = ["cdylib", "rlib"]
+publish.workspace = true
 
 [dependencies]
-leptos.workspace = true
-leptos_meta.workspace = true
-leptos_router.workspace = true
-leptos_axum = { workspace = true, optional = true }
+maud.workspace = true
 
-axum = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true }
-tower = { workspace = true, optional = true }
-tower-http = { workspace = true, optional = true }
-
-reqwest = { workspace = true, optional = true }
-moka = { workspace = true, optional = true }
-
-# HTTP client for WASM
-gloo-net = { version = "0.6", optional = true }
-wasm-bindgen = { version = "0.2", optional = true }
-web-sys = { version = "0.3", optional = true }
-console_error_panic_hook = { version = "0.1", optional = true }
-
-# Utilities
-futures = { version = "0.3", optional = true }
-urlencoding = { version = "2.1", optional = true }
+reqwest.workspace = true
+moka.workspace = true
+futures.workspace = true
+urlencoding.workspace = true
+tokio.workspace = true
 
 serde.workspace = true
 serde_json.workspace = true
@@ -42,23 +25,3 @@ chrono.workspace = true
 ulid.workspace = true
 color-eyre.workspace = true
 tracing.workspace = true
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.3", features = ["wasm_js"] }
-
-[features]
-default = []
-hydrate = ["leptos/hydrate", "dep:gloo-net", "dep:urlencoding", "dep:wasm-bindgen", "dep:web-sys", "dep:console_error_panic_hook"]
-ssr = [
-    "leptos/ssr",
-    "leptos_meta/ssr",
-    "leptos_router/ssr",
-    "dep:leptos_axum",
-    "dep:axum",
-    "dep:tokio",
-    "dep:tower",
-    "dep:tower-http",
-    "dep:reqwest",
-    "dep:moka",
-    "dep:futures",
-]

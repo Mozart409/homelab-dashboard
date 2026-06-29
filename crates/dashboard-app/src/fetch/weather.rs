@@ -1,16 +1,15 @@
 //! Weather data fetching from Open-Meteo API.
 
 use crate::types::{WeatherCondition, WeatherData};
-use leptos::prelude::*;
+use color_eyre::eyre::{Result, WrapErr};
 
-/// Server function to fetch weather data.
+/// Fetch current weather data from Open-Meteo.
 /// Cached for 15 minutes on the server side.
-#[server]
 pub async fn get_weather(
     latitude: f64,
     longitude: f64,
     location_name: String,
-) -> Result<WeatherData, ServerFnError> {
+) -> Result<WeatherData> {
     use chrono::Utc;
     use moka::future::Cache;
     use serde::Deserialize;
@@ -36,7 +35,7 @@ pub async fn get_weather(
     // Shared cache across requests
     static WEATHER_CACHE: LazyLock<Cache<String, WeatherData>> = LazyLock::new(|| {
         Cache::builder()
-            .time_to_live(Duration::from_secs(900)) // 15 minutes
+            .time_to_live(Duration::from_mins(15)) // 15 minutes
             .max_capacity(10)
             .build()
     });
@@ -61,10 +60,10 @@ pub async fn get_weather(
         .get(&url)
         .send()
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to fetch weather: {e}")))?
+        .wrap_err("Failed to fetch weather")?
         .json()
         .await
-        .map_err(|e| ServerFnError::new(format!("Failed to parse weather response: {e}")))?;
+        .wrap_err("Failed to parse weather response")?;
 
     let condition = WeatherCondition::from_wmo_code(response.current.weather_code);
 
