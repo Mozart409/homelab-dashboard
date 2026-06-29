@@ -95,70 +95,6 @@ in {
             default = {};
           };
 
-          proxmox = lib.mkOption {
-            type = lib.types.submodule {
-              options = {
-                url = lib.mkOption {
-                  type = lib.types.nullOr lib.types.str;
-                  default = null;
-                  description = "Proxmox VE URL.";
-                };
-                token_id = lib.mkOption {
-                  type = lib.types.nullOr lib.types.str;
-                  default = null;
-                  description = "Proxmox API token ID (user@realm!tokenid).";
-                };
-                token_secret = lib.mkOption {
-                  type = lib.types.nullOr lib.types.str;
-                  default = null;
-                  description = "Proxmox API token secret. Consider using secretFile instead.";
-                };
-              };
-            };
-            default = {};
-          };
-
-          jellyfin = lib.mkOption {
-            type = lib.types.submodule {
-              options = {
-                url = lib.mkOption {
-                  type = lib.types.nullOr lib.types.str;
-                  default = null;
-                  description = "Jellyfin server URL.";
-                };
-                api_key = lib.mkOption {
-                  type = lib.types.nullOr lib.types.str;
-                  default = null;
-                  description = "Jellyfin API key. Consider using secretFile instead.";
-                };
-              };
-            };
-            default = {};
-          };
-
-          homeassistant = lib.mkOption {
-            type = lib.types.submodule {
-              options = {
-                url = lib.mkOption {
-                  type = lib.types.nullOr lib.types.str;
-                  default = null;
-                  description = "Home Assistant URL.";
-                };
-                token = lib.mkOption {
-                  type = lib.types.nullOr lib.types.str;
-                  default = null;
-                  description = "Home Assistant long-lived access token. Consider using secretFile instead.";
-                };
-                entity_ids = lib.mkOption {
-                  type = lib.types.listOf lib.types.str;
-                  default = [];
-                  description = "Home Assistant entity IDs to display (empty shows all).";
-                };
-              };
-            };
-            default = {};
-          };
-
           hofvarpnir = lib.mkOption {
             type = lib.types.submodule {
               options = {
@@ -215,9 +151,7 @@ in {
       description = ''
         Path to a file containing secrets as environment variables.
         This file should contain lines like:
-        PROXMOX_TOKEN_SECRET=xxxxx
-        JELLYFIN_API_KEY=xxxxx
-        HOMEASSISTANT_TOKEN=xxxxx
+        HOFVARPNIR_API_KEY=xxxxx
       '';
     };
 

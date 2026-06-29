@@ -19,26 +19,6 @@ latitude = 52.52
 longitude = 13.41
 location = "Berlin"
 
-# Proxmox VE
-# Create an API token: Datacenter > Permissions > API Tokens
-# Token format: user@realm!tokenid
-[proxmox]
-url = "https://proxmox.local:8006"
-token_id = "dashboard@pve!monitoring"
-token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-
-# Jellyfin
-# Create an API key: Dashboard > API Keys
-[jellyfin]
-url = "https://jellyfin.local"
-api_key = "your-jellyfin-api-key"
-
-# Home Assistant
-# Create a long-lived access token: Profile > Long-Lived Access Tokens
-[homeassistant]
-url = "https://homeassistant.local"
-token = "your-home-assistant-token"
-
 # Hofvarpnir video archival system
 [hofvarpnir]
 url = "https://hofvarpnir.local"

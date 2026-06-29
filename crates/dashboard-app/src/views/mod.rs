@@ -8,9 +8,7 @@
 
 mod cards;
 
-pub use cards::{
-    health_card, homeassistant_card, jellyfin_card, proxmox_card, video_card, weather_card,
-};
+pub use cards::{health_card, video_card, weather_card};
 
 use crate::{DashboardConfig, SearchEngine};
 use maud::{DOCTYPE, Markup, PreEscaped, html};
@@ -29,12 +27,9 @@ const IDIOMORPH_SRC: &str =
 
 /// All cards rendered on the dashboard, in display order.
 /// `(id, title, icon)` — `id` doubles as the SSE event name and `/card/{id}` route.
-pub const CARDS: [(&str, &str, Option<&str>); 6] = [
+pub const CARDS: [(&str, &str, Option<&str>); 3] = [
     ("weather", "Weather", None),
     ("video", "Recent Downloads", None),
-    ("proxmox", "Proxmox", Some("🖥️")),
-    ("jellyfin", "Jellyfin", Some("🎬")),
-    ("homeassistant", "Home Assistant", Some("🏠")),
     ("health", "Service Health", Some("🩺")),
 ];
 
@@ -67,13 +62,6 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
                         section class="grid gap-6 grid-cols-1 lg:grid-cols-[300px_1fr]" {
                             (card_shell("weather", "Weather", None))
                             (card_shell("video", "Recent Downloads", None))
-                        }
-
-                        // Middle row: Service cards
-                        section class="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3" {
-                            (card_shell("proxmox", "Proxmox", Some("🖥️")))
-                            (card_shell("jellyfin", "Jellyfin", Some("🎬")))
-                            (card_shell("homeassistant", "Home Assistant", Some("🏠")))
                         }
 
                         // Bottom row: Health checks

@@ -35,14 +35,7 @@ const SSE_INTERVAL: Duration = Duration::from_secs(15);
 
 /// Card ids in display order. Each doubles as the SSE event name and the
 /// `/card/{id}` route segment.
-const CARD_IDS: [&str; 6] = [
-    "weather",
-    "video",
-    "proxmox",
-    "jellyfin",
-    "homeassistant",
-    "health",
-];
+const CARD_IDS: [&str; 3] = ["weather", "video", "health"];
 
 /// Shared handler state: the display config the fetchers need per render.
 #[derive(Clone)]
@@ -83,7 +76,6 @@ async fn main() -> Result<()> {
             longitude: config.weather.longitude,
             location_name: config.weather.location.clone(),
             search: config.search.engine(),
-            ha_entity_ids: config.homeassistant.entity_ids.clone(),
         },
     };
 
@@ -178,12 +170,6 @@ struct ServerConfig {
     #[serde(default)]
     weather: WeatherConfig,
     #[serde(default)]
-    proxmox: ProxmoxConfig,
-    #[serde(default)]
-    jellyfin: JellyfinConfig,
-    #[serde(default)]
-    homeassistant: HomeAssistantConfig,
-    #[serde(default)]
     hofvarpnir: HofvarpnirConfig,
     #[serde(default)]
     health_checks: Vec<HealthCheckConfig>,
@@ -234,27 +220,6 @@ impl Default for WeatherConfig {
             location: default_location_name(),
         }
     }
-}
-
-#[derive(Debug, Default, serde::Deserialize)]
-struct ProxmoxConfig {
-    url: Option<String>,
-    token_id: Option<String>,
-    token_secret: Option<String>,
-}
-
-#[derive(Debug, Default, serde::Deserialize)]
-struct JellyfinConfig {
-    url: Option<String>,
-    api_key: Option<String>,
-}
-
-#[derive(Debug, Default, serde::Deserialize)]
-struct HomeAssistantConfig {
-    url: Option<String>,
-    token: Option<String>,
-    #[serde(default)]
-    entity_ids: Vec<String>,
 }
 
 #[derive(Debug, Default, serde::Deserialize)]
@@ -326,30 +291,6 @@ fn apply_config_to_env(config: &ServerConfig) {
     set("WEATHER_LAT", &config.weather.latitude.to_string());
     set("WEATHER_LON", &config.weather.longitude.to_string());
     set("WEATHER_LOCATION", &config.weather.location);
-
-    if let Some(url) = &config.proxmox.url {
-        set("PROXMOX_URL", url);
-    }
-    if let Some(token_id) = &config.proxmox.token_id {
-        set("PROXMOX_TOKEN_ID", token_id);
-    }
-    if let Some(token_secret) = &config.proxmox.token_secret {
-        set("PROXMOX_TOKEN_SECRET", token_secret);
-    }
-
-    if let Some(url) = &config.jellyfin.url {
-        set("JELLYFIN_URL", url);
-    }
-    if let Some(api_key) = &config.jellyfin.api_key {
-        set("JELLYFIN_API_KEY", api_key);
-    }
-
-    if let Some(url) = &config.homeassistant.url {
-        set("HOMEASSISTANT_URL", url);
-    }
-    if let Some(token) = &config.homeassistant.token {
-        set("HOMEASSISTANT_TOKEN", token);
-    }
 
     if let Some(url) = &config.hofvarpnir.url {
         set("HOFVARPNIR_URL", url);

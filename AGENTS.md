@@ -71,7 +71,7 @@ homelab-dashboard/
 - **Workspace:** Two crates — `dashboard-app` (lib) and `dashboard-server` (bin).
 - **Rendering:** Pure server-side HTML via Maud. No WASM, no client framework.
 - **Cards:** The dashboard is a grid of cards. Each card id (e.g. `weather`,
-  `proxmox`) doubles as the SSE event name and the `/card/{id}` route segment.
+  `health`) doubles as the SSE event name and the `/card/{id}` route segment.
 - **Live updates:** A single SSE stream at `/events` re-renders every card on a
   fixed interval (`SSE_INTERVAL` in `main.rs`); htmx swaps each card's
   `innerHTML` by event name. `/card/{id}` serves the same partial for manual
