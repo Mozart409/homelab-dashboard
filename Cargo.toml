@@ -23,7 +23,7 @@ maud = { version = "0.27", features = ["axum"] }
 # Axum & tower
 axum = { version = "0.8", features = ["macros"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["fs", "cors", "trace", "compression-gzip"] }
+tower-http = { version = "0.7", features = ["fs", "cors", "trace", "compression-gzip"] }
 
 # Async runtime & streams
 tokio = { version = "1", features = ["full"] }
@@ -34,10 +34,10 @@ futures = "0.3"
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-toml = "0.8"
+toml = "1"
 
 # HTTP client
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.13", default-features = false, features = ["json","rustls-native-certs",  ] }
 
 # Error handling & tracing (per your preferences)
 color-eyre = "0.6"
@@ -48,7 +48,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 ulid = { version = "1", features = ["serde"] }
 
 # Configuration
-config = { version = "0.14", default-features = false, features = ["toml"] }
+config = { version = "0.15", default-features = false, features = ["toml"] }
 
 # Time
 chrono = { version = "0.4", features = ["serde"] }
