@@ -9,9 +9,6 @@ A self-hosted dashboard for monitoring homelab services, built with **Leptos** a
 - 🔍 **SearXNG Integration** - Search the web via your self-hosted instance
 - 🌤️ **Weather** - Current conditions from Open-Meteo (free, no API key)
 - 📺 **Hofvarpnir** - Recent video downloads from your archival system
-- 🖥️ **Proxmox** - Node and VM status overview
-- 🎬 **Jellyfin** - Media library stats and active streams
-- 🏠 **Home Assistant** - Entity states and sensors
 - 🩺 **Health Checks** - Monitor service availability
 
 ## Architecture
@@ -106,14 +103,6 @@ cargo leptos build --release
                 location = "Berlin";
               };
 
-              proxmox = {
-                url = "https://proxmox.local:8006";
-                token_id = "dashboard@pve!monitoring";
-                # Use secretsFile for token_secret
-              };
-
-              jellyfin.url = "https://jellyfin.local";
-              homeassistant.url = "https://ha.local";
               hofvarpnir.url = "https://hofvarpnir.local";
 
               health_checks = [
@@ -139,9 +128,6 @@ cargo leptos build --release
 Create `/run/secrets/dashboard-env` (or use sops-nix/agenix):
 
 ```bash
-PROXMOX_TOKEN_SECRET=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-JELLYFIN_API_KEY=your-jellyfin-api-key
-HOMEASSISTANT_TOKEN=your-long-lived-access-token
 HOFVARPNIR_API_KEY=optional-api-key
 ```
 
@@ -156,24 +142,6 @@ Configuration can be provided via:
 See [config.example.toml](config.example.toml) for all options.
 
 ## Service Setup
-
-### Proxmox
-
-1. Create an API token: **Datacenter → Permissions → API Tokens → Add**
-2. Use format: `user@realm!tokenid` for `token_id`
-3. Grant `PVEAuditor` role or custom role with:
-   - `Sys.Audit`
-   - `VM.Audit`
-
-### Jellyfin
-
-1. Go to **Dashboard → API Keys → Add**
-2. Copy the generated key to config
-
-### Home Assistant
-
-1. Go to **Profile → Long-Lived Access Tokens → Create Token**
-2. Copy the token to config
 
 ### Hofvarpnir
 

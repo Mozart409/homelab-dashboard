@@ -6,9 +6,6 @@
 //! - `SearXNG` search integration
 //! - Weather from Open-Meteo
 //! - Hofvarpnir video downloads
-//! - Proxmox VM status
-//! - Jellyfin media server
-//! - Home Assistant entities
 //! - Custom health checks
 //!
 //! This crate holds the shared [`types`], the service [`fetch`]ers, and the
@@ -32,8 +29,6 @@ pub struct DashboardConfig {
     pub location_name: String,
     /// Web-search engine the header box submits to (search is hidden when `None`).
     pub search: Option<SearchEngine>,
-    /// Home Assistant entity IDs to show (empty shows all).
-    pub ha_entity_ids: Vec<String>,
 }
 
 impl Default for DashboardConfig {
@@ -43,7 +38,6 @@ impl Default for DashboardConfig {
             longitude: 13.41,
             location_name: "Berlin".to_string(),
             search: None,
-            ha_entity_ids: Vec::new(),
         }
     }
 }
