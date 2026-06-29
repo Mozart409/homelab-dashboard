@@ -37,6 +37,10 @@ test *ARGS:
 nextest *ARGS:
     cargo nextest run --hide-progress-bar --failure-output final {{ ARGS }}
 
+# Audit dependencies: advisories, licenses, bans, sources
+deny:
+    cargo deny check
+
 # Build the docs (no deps)
 doc:
     cargo doc --no-deps
