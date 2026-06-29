@@ -23,6 +23,11 @@ const HTMX_INTEGRITY: &str =
     "sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V";
 /// htmx Server-Sent Events extension.
 const HTMX_SSE_SRC: &str = "https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2/sse.js";
+/// idiomorph + its htmx extension: powers `hx-swap="morph:innerHTML"` so cards
+/// are reconciled in place. Unchanged nodes (e.g. video thumbnails) are kept
+/// rather than recreated, so the browser doesn't re-request their assets.
+const IDIOMORPH_SRC: &str =
+    "https://cdn.jsdelivr.net/npm/idiomorph@0.7.3/dist/idiomorph-ext.min.js";
 
 /// All cards rendered on the dashboard, in display order.
 /// `(id, title, icon)` — `id` doubles as the SSE event name and `/card/{id}` route.
@@ -48,6 +53,7 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
                 link rel="stylesheet" href="/dashboard.css";
                 script src=(HTMX_SRC) integrity=(HTMX_INTEGRITY) crossorigin="anonymous" {}
                 script src=(HTMX_SSE_SRC) crossorigin="anonymous" {}
+                script src=(IDIOMORPH_SRC) crossorigin="anonymous" {}
             }
             body {
                 main class="max-w-[1400px] mx-auto p-6 min-h-screen flex flex-col bg-bg-primary text-text-primary font-sans" {
@@ -58,7 +64,7 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
                         }
                     }
 
-                    div hx-ext="sse" sse-connect="/events" class="flex-1 flex flex-col gap-8" {
+                    div hx-ext="sse,morph" sse-connect="/events" class="flex-1 flex flex-col gap-8" {
                         // Top row: Weather + Recent videos
                         section class="grid gap-6 grid-cols-1 lg:grid-cols-[300px_1fr]" {
                             (card_shell("weather", "Weather", None))
@@ -90,13 +96,14 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
 }
 
 /// The outer card container: holds the `.card` chrome, subscribes to its SSE
-/// event, and starts with a skeleton body. htmx swaps `innerHTML` on each frame.
+/// event, and starts with a skeleton body. Each frame is morphed into place so
+/// unchanged nodes (e.g. thumbnails) are preserved instead of recreated.
 fn card_shell(id: &str, title: &str, icon: Option<&str>) -> Markup {
     html! {
         div id=(format!("card-{id}"))
             class="bg-bg-card border border-border rounded-xl overflow-hidden"
             sse-swap=(id)
-            hx-swap="innerHTML"
+            hx-swap="morph:innerHTML"
         {
             (card_header(id, title, icon))
             (skeleton(4))
