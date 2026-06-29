@@ -5,8 +5,12 @@
 listen_address = "0.0.0.0"
 port = 8080 
 
-# SearXNG - your self-hosted search instance
-[searxng]
+# Web search - the header search box submits queries straight to this engine
+# (the browser is redirected there; the dashboard does not proxy the search).
+# type: search engine to use (currently only "searxng"; more may be added later)
+# url:  base URL of your instance
+[search]
+type = "searxng"
 url = "https://search.example.com"
 
 # Weather - Open-Meteo (free, no API key needed)

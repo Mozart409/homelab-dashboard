@@ -16,7 +16,6 @@ maud.workspace = true
 reqwest.workspace = true
 moka.workspace = true
 futures.workspace = true
-urlencoding.workspace = true
 tokio.workspace = true
 
 serde.workspace = true
