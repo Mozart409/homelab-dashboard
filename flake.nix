@@ -71,8 +71,7 @@
           nativeBuildInputs = [pkgs.tailwindcss_4];
 
           buildPhase = ''
-            cd static
-            tailwindcss -i input.css -o dashboard.css --minify
+            tailwindcss -i static/input.css -o static/dashboard.css --minify
           '';
 
           installPhase = ''
