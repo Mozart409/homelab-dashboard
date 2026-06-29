@@ -1,0 +1,5 @@
+# Ignore merge commits in checks and bumps
+ignore_merge_commits = true
+
+# Silently ignore fixup!/squash!/amend! commits
+ignore_fixup_commits = true
