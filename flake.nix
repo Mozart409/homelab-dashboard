@@ -1,5 +1,5 @@
 {
-  description = "Homelab Dashboard - A Leptos + Axum dashboard for self-hosted services";
+  description = "Homelab Dashboard - An Axum + Maud + htmx dashboard for self-hosted services";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -34,10 +34,7 @@
           };
         };
 
-        # Rust toolchain with WASM target
-        rustToolchain = pkgs.rust-bin.stable."1.96.0".default.override {
-          targets = ["wasm32-unknown-unknown"];
-        };
+        rustToolchain = pkgs.rust-bin.stable."1.96.0".default;
 
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
 
@@ -59,37 +56,11 @@
 
           nativeBuildInputs = with pkgs; [
             pkg-config
-            wasm-bindgen-cli
-            binaryen # For wasm-opt
           ];
         };
 
         # Build the cargo dependencies
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-
-        # Build the WASM client
-        wasmClient = craneLib.buildPackage (commonArgs
-          // {
-            inherit cargoArtifacts;
-
-            pname = "dashboard-app-wasm";
-
-            cargoExtraArgs = "-p dashboard-app --target wasm32-unknown-unknown --features hydrate";
-
-            # Don't run tests for WASM
-            doCheck = false;
-
-            postBuild = ''
-              wasm-bindgen \
-                --target web \
-                --out-dir $out/pkg \
-                --out-name dashboard \
-                target/wasm32-unknown-unknown/release/dashboard_app.wasm
-
-              # Optimize WASM
-              wasm-opt -Oz -o $out/pkg/dashboard_bg.wasm $out/pkg/dashboard_bg.wasm
-            '';
-          });
 
         # Build CSS with Tailwind v4
         tailwindCss = pkgs.stdenv.mkDerivation {
@@ -120,9 +91,7 @@
             cargoExtraArgs = "-p dashboard-server";
 
             postInstall = ''
-              # Copy WASM assets
-              mkdir -p $out/share/dashboard/pkg
-              cp -r ${wasmClient}/pkg/* $out/share/dashboard/pkg/
+              mkdir -p $out/share/dashboard
 
               # Copy Tailwind-compiled CSS
               cp ${tailwindCss}/dashboard.css $out/share/dashboard/
@@ -140,7 +109,7 @@
       in {
         packages = {
           default = server;
-          inherit server wasmClient;
+          inherit server tailwindCss;
         };
 
         devShells.default = craneLib.devShell {
@@ -152,15 +121,7 @@
             rustToolchain
             rust-analyzer
             cargo-watch
-            cargo-leptos
-
-            # WASM tools
-            wasm-bindgen-cli
-            wasm-pack
-            binaryen
-
-            # Development tools
-            trunk # Alternative to cargo-leptos for dev
+            just
 
             lefthook
 
@@ -185,17 +146,14 @@
             echo "🏠 Homelab Dashboard Development Shell"
             echo ""
             echo "Commands:"
-            echo "  cargo leptos watch   - Run dev server with hot reload"
-            echo "  cargo build          - Build server"
-            echo "  cargo test           - Run tests"
-            echo "  cargo fmt            - Format code"
-            echo "  cargo clippy         - Lint code"
-            echo "  lefthook run pre-commit - Run pre-commit checks"
-            echo "  lefthook run pre-push   - Run pre-push checks"
-            echo ""
-            echo "Hooks:"
-            echo "  fmt     - stage_fixed: true"
-            echo "  clippy  - stage_fixed: true"
+            echo "  just                 - List all available recipes"
+            echo "  just dev             - Watch: server + Tailwind CSS together"
+            echo "  just watch           - Watch: rebuild + rerun the server"
+            echo "  just run             - Run the server"
+            echo "  just test            - Run tests"
+            echo "  just fmt             - Format code"
+            echo "  just clippy          - Lint code"
+            echo "  just css-watch       - Watch + rebuild Tailwind CSS"
             echo ""
           '';
         };
