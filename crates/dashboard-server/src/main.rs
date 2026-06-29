@@ -6,6 +6,7 @@
 //! over `/events` (swapped by event name) and served from `/card/{id}` for
 //! manual refresh. Search is proxied to `SearXNG` via `/search`.
 
+use std::collections::HashMap;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::time::Duration;
@@ -121,17 +122,26 @@ async fn card(State(state): State<AppState>, Path(id): Path<String>) -> Response
     }
 }
 
-/// Shared SSE stream: pushes every card on connect, then every [`SSE_INTERVAL`].
+/// Shared SSE stream: renders every card each [`SSE_INTERVAL`], but only pushes
+/// a frame when a card's markup actually changed. Unchanged cards aren't
+/// re-sent, so htmx doesn't morph them and the browser keeps their assets.
 async fn events(
     State(state): State<AppState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let cfg = state.config;
 
     let stream = async_stream::stream! {
+        // Last markup emitted per card id; a card is re-pushed only on change.
+        let mut last: HashMap<&str, String> = HashMap::new();
         loop {
             for id in CARD_IDS {
                 if let Some(markup) = render_card(&cfg, id).await {
-                    yield Ok(Event::default().event(id).data(markup.into_string()));
+                    let html = markup.into_string();
+                    if last.get(id).is_some_and(|prev| *prev == html) {
+                        continue;
+                    }
+                    yield Ok(Event::default().event(id).data(&html));
+                    last.insert(id, html);
                 }
             }
             tokio::time::sleep(SSE_INTERVAL).await;
