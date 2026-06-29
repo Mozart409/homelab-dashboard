@@ -6,9 +6,17 @@
 }: let
   cfg = config.services.homelab-dashboard;
 
-  # Convert settings to TOML
+  # Convert settings to TOML. TOML has no `null`, but many options default to
+  # null when unset, so strip null values recursively (including inside lists
+  # like `health_checks`) before generating the file.
   settingsFormat = pkgs.formats.toml {};
-  configFile = settingsFormat.generate "homelab-dashboard.toml" cfg.settings;
+  stripNulls = v:
+    if builtins.isAttrs v
+    then lib.filterAttrs (_: x: x != null) (builtins.mapAttrs (_: stripNulls) v)
+    else if builtins.isList v
+    then map stripNulls v
+    else v;
+  configFile = settingsFormat.generate "homelab-dashboard.toml" (stripNulls cfg.settings);
 in {
   options.services.homelab-dashboard = {
     enable = lib.mkEnableOption "Homelab Dashboard";
