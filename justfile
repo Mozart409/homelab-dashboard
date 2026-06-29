@@ -53,15 +53,6 @@ doc-open:
 run *ARGS:
     cargo run -p dashboard-server {{ ARGS }}
 
-# Run server watch + Tailwind CSS watch together (Ctrl-C stops both)
-dev:
-    #!/usr/bin/env bash
-    set -uo pipefail
-    trap 'kill 0' EXIT INT TERM
-    tailwindcss -i static/input.css -o static/dashboard.css --watch &
-    cargo watch -x 'run -p dashboard-server' &
-    wait
-
 # Watch sources and restart the server on change
 watch:
     cargo watch -x 'run -p dashboard-server'
