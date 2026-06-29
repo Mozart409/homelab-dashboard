@@ -43,6 +43,7 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
                 meta charset="utf-8";
                 meta name="viewport" content="width=device-width, initial-scale=1";
                 title { "Homelab Dashboard" }
+                link rel="icon" href="https://fav.farm/🏠";
                 link rel="stylesheet" href="/dashboard.css";
                 script src=(HTMX_SRC) integrity=(HTMX_INTEGRITY) crossorigin="anonymous" {}
                 script src=(HTMX_SSE_SRC) crossorigin="anonymous" {}
