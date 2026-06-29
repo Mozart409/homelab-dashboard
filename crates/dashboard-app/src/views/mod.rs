@@ -75,6 +75,11 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
                         span { "Homelab Dashboard" }
                         span { "•" }
                         span { "Powered by Axum + Maud + htmx" }
+                        span { "•" }
+                        a href="https://github.com/Mozart409/homelab-dashboard" target="_blank" rel="noopener"
+                            class="text-text-muted no-underline transition-colors duration-150 hover:text-text-primary" {
+                            "GitHub"
+                        }
                     }
                 }
             }
