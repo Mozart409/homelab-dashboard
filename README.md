@@ -95,7 +95,10 @@ cargo leptos build --release
               listen_address = "0.0.0.0";
               port = 8080;
 
-              searxng.url = "https://search.example.com";
+              search = {
+                type = "searxng";
+                url = "https://search.example.com";
+              };
 
               weather = {
                 latitude = 52.52;

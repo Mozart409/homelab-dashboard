@@ -7,14 +7,12 @@
 //! before the first SSE frame arrives.
 
 mod cards;
-mod search;
 
 pub use cards::{
     health_card, homeassistant_card, jellyfin_card, proxmox_card, video_card, weather_card,
 };
-pub use search::{search_error, search_results};
 
-use crate::DashboardConfig;
+use crate::{DashboardConfig, SearchEngine};
 use maud::{DOCTYPE, Markup, PreEscaped, html};
 
 /// htmx 2.x core (pinned with SRI per the user's snippet).
@@ -60,7 +58,7 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
                     header class="flex items-center justify-between gap-6 mb-8 pb-6 border-b border-border flex-col md:flex-row" {
                         h1 class="font-mono text-2xl font-semibold text-text-primary flex items-center gap-2" { "🏠 Homelab" }
                         div class="flex-1 max-w-[500px] w-full md:w-auto" {
-                            (search_box(cfg.searxng_url.is_some()))
+                            (search_box(cfg.search.as_ref()))
                         }
                     }
 
@@ -173,29 +171,38 @@ pub fn skeleton(rows: usize) -> Markup {
     }
 }
 
-/// Search box wired to the `/search` endpoint via htmx.
-fn search_box(enabled: bool) -> Markup {
+/// Header search box: a plain GET form that submits straight to the configured
+/// engine (e.g. `SearXNG`), so the browser is redirected there with the query.
+/// Renders a disabled placeholder when no engine is configured.
+fn search_box(engine: Option<&SearchEngine>) -> Markup {
     html! {
-        div class="relative" {
+        @if let Some(engine) = engine {
+            form action=(engine.action_url()) method="get" target="_blank" rel="noopener" role="search" class="relative flex items-center" {
+                svg class="absolute left-4 w-[18px] h-[18px] text-text-muted pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" {
+                    circle cx="11" cy="11" r="8" {}
+                    path d="m21 21-4.35-4.35" {}
+                }
+                input
+                    type="search"
+                    name=(engine.query_param())
+                    autocomplete="off"
+                    autofocus
+                    aria-label="Search"
+                    class="w-full py-2 px-4 pl-[calc(1rem+24px)] bg-bg-secondary border border-border rounded-lg text-text-primary font-mono text-sm transition-all duration-150 placeholder:text-text-muted focus:outline-none focus:border-accent-blue focus:ring-[3px] focus:ring-accent-blue/15"
+                    placeholder="Search the web...";
+            }
+        } @else {
             div class="relative flex items-center" {
                 svg class="absolute left-4 w-[18px] h-[18px] text-text-muted pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" {
                     circle cx="11" cy="11" r="8" {}
                     path d="m21 21-4.35-4.35" {}
                 }
                 input
-                    type="text"
-                    name="q"
-                    autocomplete="off"
-                    class="w-full py-2 px-4 pl-[calc(1rem+24px)] bg-bg-secondary border border-border rounded-lg text-text-primary font-mono text-sm transition-all duration-150 placeholder:text-text-muted focus:outline-none focus:border-accent-blue focus:ring-[3px] focus:ring-accent-blue/15"
-                    placeholder=(if enabled { "Search the web..." } else { "Search disabled (set searxng.url)" })
-                    disabled[!enabled]
-                    hx-get="/search"
-                    hx-trigger="input changed delay:300ms, keyup[key=='Enter']"
-                    hx-target="#search-results"
-                    hx-indicator="#search-spinner";
-                div id="search-spinner" class="htmx-indicator absolute right-4 w-4 h-4 border-2 border-border border-t-accent-blue rounded-full animate-spin" {}
+                    type="search"
+                    disabled
+                    class="w-full py-2 px-4 pl-[calc(1rem+24px)] bg-bg-secondary border border-border rounded-lg text-text-muted font-mono text-sm"
+                    placeholder="Search disabled (set [search] url)";
             }
-            div id="search-results" class="absolute top-[calc(100%+0.25rem)] left-0 right-0 z-[100]" {}
         }
     }
 }

@@ -54,12 +54,19 @@ in {
             description = "Port to listen on.";
           };
 
-          searxng = lib.mkOption {
+          search = lib.mkOption {
             type = lib.types.submodule {
-              options.url = lib.mkOption {
-                type = lib.types.nullOr lib.types.str;
-                default = null;
-                description = "SearXNG instance URL.";
+              options = {
+                type = lib.mkOption {
+                  type = lib.types.enum [ "searxng" ];
+                  default = "searxng";
+                  description = "Search engine the header box submits to.";
+                };
+                url = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = "Base URL of the search instance (e.g. SearXNG).";
+                };
               };
             };
             default = {};

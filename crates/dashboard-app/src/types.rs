@@ -246,25 +246,6 @@ pub struct HealthOverview {
 }
 
 // ============================================================================
-// SearXNG Types (for client-side search)
-// ============================================================================
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SearchResult {
-    pub title: String,
-    pub url: String,
-    pub content: Option<String>,
-    pub engine: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SearchResponse {
-    pub query: String,
-    pub results: Vec<SearchResult>,
-    pub suggestions: Vec<String>,
-}
-
-// ============================================================================
 // Dashboard Configuration (runtime)
 // ============================================================================
 

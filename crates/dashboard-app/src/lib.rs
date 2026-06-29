@@ -30,8 +30,8 @@ pub struct DashboardConfig {
     pub longitude: f64,
     /// Weather location display name.
     pub location_name: String,
-    /// `SearXNG` instance URL (search is disabled when `None`).
-    pub searxng_url: Option<String>,
+    /// Web-search engine the header box submits to (search is hidden when `None`).
+    pub search: Option<SearchEngine>,
     /// Home Assistant entity IDs to show (empty shows all).
     pub ha_entity_ids: Vec<String>,
 }
@@ -42,8 +42,49 @@ impl Default for DashboardConfig {
             latitude: 52.52,
             longitude: 13.41,
             location_name: "Berlin".to_string(),
-            searxng_url: None,
+            search: None,
             ha_entity_ids: Vec::new(),
+        }
+    }
+}
+
+/// Web-search engine the header search box submits queries to.
+///
+/// The box is a plain GET form that the browser sends straight to the
+/// instance, so the search happens on the engine itself — the dashboard never
+/// proxies it. Only `SearXNG` is supported today; the [`kind`](Self::kind)
+/// discriminator leaves room for more engines later.
+#[derive(Debug, Clone)]
+pub struct SearchEngine {
+    /// Which engine the [`url`](Self::url) points at.
+    pub kind: SearchEngineKind,
+    /// Base URL of the instance, e.g. `https://search.example.com`.
+    pub url: String,
+}
+
+/// Supported search engines. Extend this as new engines are wired up.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum SearchEngineKind {
+    /// A self-hosted `SearXNG` instance (`{url}/search?q=…`).
+    #[default]
+    Searxng,
+}
+
+impl SearchEngine {
+    /// The form `action` URL the browser GETs the query against.
+    #[must_use]
+    pub fn action_url(&self) -> String {
+        let base = self.url.trim_end_matches('/');
+        match self.kind {
+            SearchEngineKind::Searxng => format!("{base}/search"),
+        }
+    }
+
+    /// The query-string parameter the engine reads the search term from.
+    #[must_use]
+    pub const fn query_param(&self) -> &'static str {
+        match self.kind {
+            SearchEngineKind::Searxng => "q",
         }
     }
 }

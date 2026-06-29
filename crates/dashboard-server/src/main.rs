@@ -4,7 +4,8 @@
 //! Axum server that renders the dashboard with Maud and drives htmx over a
 //! shared Server-Sent Events stream. Each card is delivered two ways: pushed
 //! over `/events` (swapped by event name) and served from `/card/{id}` for
-//! manual refresh. Search is proxied to `SearXNG` via `/search`.
+//! manual refresh. The header search box submits straight to the configured
+//! engine (e.g. `SearXNG`), so the dashboard never proxies queries.
 
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -12,7 +13,7 @@ use std::net::SocketAddr;
 use std::time::Duration;
 
 use axum::Router;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{IntoResponse, Response};
@@ -25,9 +26,8 @@ use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
-use dashboard_app::DashboardConfig;
-use dashboard_app::fetch::search;
 use dashboard_app::views;
+use dashboard_app::{DashboardConfig, SearchEngine, SearchEngineKind};
 
 /// How often the shared SSE stream re-renders every card. Per-service `moka`
 /// caches dedupe upstream calls, so this can stay snappy.
@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
             latitude: config.weather.latitude,
             longitude: config.weather.longitude,
             location_name: config.weather.location.clone(),
-            searxng_url: config.searxng.url.clone(),
+            search: config.search.engine(),
             ha_entity_ids: config.homeassistant.entity_ids.clone(),
         },
     };
@@ -95,7 +95,6 @@ async fn main() -> Result<()> {
         .route("/", get(index))
         .route("/events", get(events))
         .route("/card/{id}", get(card))
-        .route("/search", get(search_handler))
         .fallback_service(ServeDir::new(static_dir))
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())
@@ -152,37 +151,11 @@ async fn events(
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
-/// Proxy a search query to `SearXNG` and render the results dropdown.
-async fn search_handler(
-    State(state): State<AppState>,
-    Query(params): Query<SearchParams>,
-) -> Markup {
-    let query = params.q.unwrap_or_default();
-
-    if query.trim().is_empty() {
-        return views::search_results(&query, &[]);
-    }
-
-    match search(state.config.searxng_url.as_deref(), &query).await {
-        Ok(response) => views::search_results(&query, &response.results),
-        Err(e) => views::search_error(&e.to_string()),
-    }
-}
-
-/// Query string for `/search`.
-#[derive(Debug, serde::Deserialize)]
-struct SearchParams {
-    q: Option<String>,
-}
-
 /// Render the inner partial for a card by id (`None` if the id is unknown).
 async fn render_card(cfg: &DashboardConfig, id: &str) -> Option<Markup> {
     let markup = match id {
         "weather" => views::weather_card(cfg).await,
         "video" => views::video_card().await,
-        "proxmox" => views::proxmox_card().await,
-        "jellyfin" => views::jellyfin_card().await,
-        "homeassistant" => views::homeassistant_card(cfg).await,
         "health" => views::health_card().await,
         _ => return None,
     };
@@ -201,7 +174,7 @@ struct ServerConfig {
     port: u16,
 
     #[serde(default)]
-    searxng: SearxngConfig,
+    search: SearchConfig,
     #[serde(default)]
     weather: WeatherConfig,
     #[serde(default)]
@@ -216,9 +189,31 @@ struct ServerConfig {
     health_checks: Vec<HealthCheckConfig>,
 }
 
+/// `[search]` config: which web-search engine the header box submits to.
 #[derive(Debug, Default, serde::Deserialize)]
-struct SearxngConfig {
+struct SearchConfig {
+    #[serde(default, rename = "type")]
+    engine: SearchEngineType,
     url: Option<String>,
+}
+
+/// Configured search-engine kind (TOML `type = "searxng"`). Extend alongside
+/// [`SearchEngineKind`] as new engines are supported.
+#[derive(Debug, Default, Clone, Copy, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum SearchEngineType {
+    #[default]
+    Searxng,
+}
+
+impl SearchConfig {
+    /// Build the app-level [`SearchEngine`] (search is disabled when no `url`).
+    fn engine(&self) -> Option<SearchEngine> {
+        let kind = match self.engine {
+            SearchEngineType::Searxng => SearchEngineKind::Searxng,
+        };
+        self.url.clone().map(|url| SearchEngine { kind, url })
+    }
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -326,10 +321,6 @@ fn apply_config_to_env(config: &ServerConfig) {
         unsafe {
             std::env::set_var(key, value);
         }
-    }
-
-    if let Some(url) = &config.searxng.url {
-        set("SEARXNG_URL", url);
     }
 
     set("WEATHER_LAT", &config.weather.latitude.to_string());
