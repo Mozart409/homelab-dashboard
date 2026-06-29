@@ -152,9 +152,6 @@
             echo ""
           '';
         };
-
-        # NixOS module
-        nixosModules.default = import ./module.nix;
       }
     )
     // {
