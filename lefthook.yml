@@ -15,7 +15,10 @@ pre-commit:
       stage_fixed: true
     build_css:
       glob: "*.{rs,css}"
-      run: tailwindcss -i static/input.css -o static/dashboard.css
+      # Recompile and stage the CSS. `git add` is explicit because `stage_fixed`
+      # only re-stages already-staged files, but editing only `.rs` regenerates
+      # `static/dashboard.css` which wasn't staged — so it would be left behind.
+      run: tailwindcss -i static/input.css -o static/dashboard.css && git add static/dashboard.css
       stage_fixed: true
     build:
       glob: "*.rs"
