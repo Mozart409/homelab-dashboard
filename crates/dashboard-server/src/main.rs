@@ -115,6 +115,7 @@ async fn index(State(state): State<AppState>) -> Markup {
 }
 
 /// A single card partial for manual refresh; 404 for unknown ids.
+#[allow(clippy::option_if_let_else)]
 async fn card(State(state): State<AppState>, Path(id): Path<String>) -> Response {
     match render_card(&state.config, &id).await {
         Some(markup) => markup.into_response(),

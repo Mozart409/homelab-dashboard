@@ -137,6 +137,7 @@ pub fn card_header(id: &str, title: &str, icon: Option<&str>) -> Markup {
 
 /// Render a full card partial: header + the supplied body.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)]
 pub fn card(id: &str, title: &str, icon: Option<&str>, body: Markup) -> Markup {
     html! {
         (card_header(id, title, icon))
