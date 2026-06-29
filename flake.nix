@@ -117,26 +117,22 @@
           inputsFrom = [server];
 
           packages = with pkgs; [
-            # Rust tools
-            rustToolchain
-            rust-analyzer
+            # keep-sorted start
+            cargo-audit
+            cargo-deny
             cargo-watch
-            just
-
-            lefthook
-
-            # Debugging
-            lldb
-
-            # AI
-            opencode
             claude-code
-
-            # CSS
-            tailwindcss_4
-
-            # Browser testing
+            cocogitto
+            just
+            keep-sorted
+            lefthook
+            lldb
+            opencode
             playwright-driver.browsers
+            rust-analyzer
+            rustToolchain
+            tailwindcss_4
+            # keep-sorted end
           ];
 
           shellHook = ''
