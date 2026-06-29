@@ -5,6 +5,7 @@ use maud::{Markup, html};
 use crate::types::SearchResult;
 
 /// The dropdown panel wrapper shared by every result state.
+#[allow(clippy::needless_pass_by_value)]
 fn panel(inner: Markup) -> Markup {
     html! {
         div class="bg-bg-card border border-border rounded-lg shadow-lg max-h-[400px] overflow-y-auto" {

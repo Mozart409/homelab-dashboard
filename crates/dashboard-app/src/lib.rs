@@ -1,3 +1,5 @@
+#![allow(clippy::multiple_crate_versions)]
+#![allow(clippy::missing_errors_doc)]
 //! Homelab Dashboard - shared application crate.
 //!
 //! A self-hosted dashboard for monitoring homelab services including:
