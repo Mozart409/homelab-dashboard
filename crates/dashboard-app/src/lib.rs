@@ -29,6 +29,8 @@ pub struct DashboardConfig {
     pub location_name: String,
     /// Web-search engine the header box submits to (search is hidden when `None`).
     pub search: Option<SearchEngine>,
+    /// Static shortcuts rendered in the Quick Links card.
+    pub quick_links: Vec<QuickLink>,
 }
 
 impl Default for DashboardConfig {
@@ -38,6 +40,47 @@ impl Default for DashboardConfig {
             longitude: 13.41,
             location_name: "Berlin".to_string(),
             search: None,
+            quick_links: Vec::new(),
+        }
+    }
+}
+
+/// A labelled shortcut shown in the Quick Links card.
+///
+/// Purely static, configured under `[[quick_links]]` in `config.toml`; unlike
+/// health checks the dashboard never contacts the URL, it just links to it.
+#[derive(Debug, Clone)]
+pub struct QuickLink {
+    /// Display label, e.g. `Grafana`.
+    pub name: String,
+    /// Destination URL the link points at.
+    pub url: String,
+    /// Optional leading icon (inline glyph or remote image).
+    pub icon: Option<Icon>,
+}
+
+/// A quick-link icon, either an inline glyph or a remote image.
+///
+/// The `[[quick_links]]` config carries a single `icon` string; it's classified
+/// into one of these variants at load time (see [`Icon::from_config`]) so the
+/// view can render each kind without re-sniffing the string.
+#[derive(Debug, Clone)]
+pub enum Icon {
+    /// A short inline glyph rendered as text, e.g. an emoji like `📊`.
+    Text(String),
+    /// A remote image URL (e.g. an SVG from dashboard-icons), rendered as `<img>`.
+    Image(String),
+}
+
+impl Icon {
+    /// Classify a raw config string: anything with an `http(s)` scheme is an
+    /// [`Image`](Self::Image), everything else is inline [`Text`](Self::Text).
+    #[must_use]
+    pub fn from_config(raw: String) -> Self {
+        if raw.starts_with("http://") || raw.starts_with("https://") {
+            Self::Image(raw)
+        } else {
+            Self::Text(raw)
         }
     }
 }

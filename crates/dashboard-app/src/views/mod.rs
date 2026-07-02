@@ -8,7 +8,7 @@
 
 mod cards;
 
-pub use cards::{health_card, video_card, weather_card};
+pub use cards::{health_card, quick_links_card, video_card, weather_card};
 
 use crate::{DashboardConfig, SearchEngine};
 use maud::{DOCTYPE, Markup, PreEscaped, html};
@@ -27,7 +27,8 @@ const IDIOMORPH_SRC: &str =
 
 /// All cards rendered on the dashboard, in display order.
 /// `(id, title, icon)` — `id` doubles as the SSE event name and `/card/{id}` route.
-pub const CARDS: [(&str, &str, Option<&str>); 3] = [
+pub const CARDS: [(&str, &str, Option<&str>); 4] = [
+    ("links", "Quick Links", Some("🔗")),
     ("weather", "Weather", None),
     ("video", "Recent Downloads", None),
     ("health", "Service Health", Some("🩺")),
@@ -59,7 +60,12 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
                     }
 
                     div hx-ext="sse,morph" sse-connect="/events" class="flex-1 flex flex-col gap-8" {
-                        // Top row: Weather + Recent videos
+                        // Top row: Quick links
+                        section class="grid gap-6" {
+                            (card_shell("links", "Quick Links", Some("🔗")))
+                        }
+
+                        // Weather + Recent videos
                         section class="grid gap-6 grid-cols-1 lg:grid-cols-[300px_1fr]" {
                             (card_shell("weather", "Weather", None))
                             (card_shell("video", "Recent Downloads", None))

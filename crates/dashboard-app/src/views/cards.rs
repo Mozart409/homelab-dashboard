@@ -7,9 +7,9 @@
 use maud::{Markup, html};
 
 use super::{card, card_error};
-use crate::DashboardConfig;
 use crate::fetch::{get_health_overview, get_hofvarpnir_status, get_weather};
 use crate::types::{HealthOverview, HealthStatus, HofvarpnirStatus, WeatherData};
+use crate::{DashboardConfig, Icon, QuickLink};
 
 // ============================================================================
 // Weather
@@ -186,6 +186,49 @@ fn health_body(overview: &HealthOverview) -> Markup {
 
             div class="text-[0.7rem] text-text-muted pt-2 mt-4 border-t border-border-subtle" {
                 "Checked: " (overview.fetched_at.format("%H:%M:%S").to_string())
+            }
+        }
+    }
+}
+
+// ============================================================================
+// Quick links
+// ============================================================================
+
+/// Quick links card partial. Static, config-driven — no fetch, so no error path.
+#[must_use]
+pub fn quick_links_card(cfg: &DashboardConfig) -> Markup {
+    card(
+        "links",
+        "Quick Links",
+        Some("🔗"),
+        quick_links_body(&cfg.quick_links),
+    )
+}
+
+fn quick_links_body(links: &[QuickLink]) -> Markup {
+    html! {
+        div class="p-4" {
+            @if links.is_empty() {
+                div class="text-center py-4 text-text-muted text-sm" { "No quick links configured" }
+            } @else {
+                div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2" {
+                    @for link in links {
+                        a href=(link.url) target="_blank" rel="noopener"
+                            class="flex items-center gap-2 px-4 py-2 bg-bg-elevated rounded border-l-[3px] border-l-accent-blue text-text-primary no-underline transition-colors duration-150 hover:text-accent-blue"
+                        {
+                            @if let Some(icon) = &link.icon {
+                                @match icon {
+                                    Icon::Text(glyph) => { span class="text-base shrink-0" { (glyph) } }
+                                    Icon::Image(src) => {
+                                        img class="w-5 h-5 shrink-0 object-contain" src=(src) alt="" loading="lazy";
+                                    }
+                                }
+                            }
+                            span class="text-sm font-medium truncate" { (link.name) }
+                        }
+                    }
+                }
             }
         }
     }
