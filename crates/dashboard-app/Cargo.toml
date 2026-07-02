@@ -24,3 +24,7 @@ chrono.workspace = true
 ulid.workspace = true
 color-eyre.workspace = true
 tracing.workspace = true
+
+[build-dependencies]
+# Format the compile timestamp embedded in the footer.
+chrono.workspace = true
