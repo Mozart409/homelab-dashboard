@@ -147,6 +147,31 @@ in {
             default = [];
             description = "List of health check endpoints.";
           };
+
+          quick_links = lib.mkOption {
+            type = lib.types.listOf (lib.types.submodule {
+              options = {
+                name = lib.mkOption {
+                  type = lib.types.str;
+                  description = "Quick link display label.";
+                };
+                url = lib.mkOption {
+                  type = lib.types.str;
+                  description = "Destination URL the link points at.";
+                };
+                icon = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = ''
+                    Optional leading icon: either an inline emoji (e.g. "📊")
+                    or an http(s) image URL (e.g. an SVG from dashboard-icons).
+                  '';
+                };
+              };
+            });
+            default = [];
+            description = "List of static shortcuts shown in the Quick Links card.";
+          };
         };
       };
       default = {};
