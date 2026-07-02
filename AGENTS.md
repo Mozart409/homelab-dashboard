@@ -219,3 +219,22 @@ editing use `just css-watch` (or `just dev`).
    `fetch/mod.rs`.
 3. Import heavy/SSR-only deps inside the function body; cache external calls
    with `moka`; read credentials from the environment.
+
+### Committing Changes
+
+Commits follow Conventional Commits, enforced by `cog verify` (commit-msg hook).
+
+1. Inspect the tree (`git status`, `git diff`) and recent `git log` to match the
+   existing style.
+2. Split changes into logical units; stage per unit (hunk-level staging when one
+   file spans several units) so each commit is self-contained.
+3. Commit in the house style — a short, lowercase `type(scope): summary`, e.g.
+   `feat(links): add quick links card`. Types: `feat`, `fix`, `refactor`,
+   `chore`, `docs`, `ci`, `perf`.
+4. The `pre-commit` hook (lefthook) runs keep-sorted, `cargo fmt`, `cargo clippy
+   --fix`, rebuilds/stages `static/dashboard.css`, and builds the workspace — it
+   may re-stage fixed files, so re-check the tree after committing.
+5. Run `git` from the real shell, never a sandboxed subprocess: signing needs an
+   askpass prompt the sandbox can't provide.
+6. Leave the tree clean; `pre-push` gates on tests, fmt check, strict clippy, and
+   `cargo deny`.
