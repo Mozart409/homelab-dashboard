@@ -25,6 +25,11 @@ const HTMX_SSE_SRC: &str = "https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2/sse.
 const IDIOMORPH_SRC: &str =
     "https://cdn.jsdelivr.net/npm/idiomorph@0.7.3/dist/idiomorph-ext.min.js";
 
+/// Build metadata embedded at compile time (git hash + build time via `build.rs`).
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const GIT_HASH: &str = env!("GIT_HASH");
+const BUILD_TIME: &str = env!("BUILD_TIME");
+
 /// All cards rendered on the dashboard, in display order.
 /// `(id, title, icon)` — `id` doubles as the SSE event name and `/card/{id}` route.
 pub const CARDS: [(&str, &str, Option<&str>); 4] = [
@@ -77,7 +82,7 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
                         }
                     }
 
-                    footer class="mt-auto pt-6 border-t border-border-subtle flex items-center justify-center gap-2 text-text-muted text-sm" {
+                    footer class="mt-auto pt-6 border-t border-border-subtle flex flex-wrap items-center justify-center gap-2 text-text-muted text-sm" {
                         span { "Homelab Dashboard" }
                         span { "•" }
                         span { "Powered by Axum + Maud + htmx" }
@@ -85,6 +90,10 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
                         a href="https://github.com/Mozart409/homelab-dashboard" target="_blank" rel="noopener"
                             class="text-text-muted no-underline transition-colors duration-150 hover:text-text-primary" {
                             "GitHub"
+                        }
+                        span { "•" }
+                        span class="font-mono text-xs" {
+                            "v" (VERSION) " · " (GIT_HASH) " · " (BUILD_TIME)
                         }
                     }
                 }
