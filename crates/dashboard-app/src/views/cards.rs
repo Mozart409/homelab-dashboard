@@ -76,7 +76,7 @@ const fn wind_direction_to_cardinal(degrees: u16) -> &'static str {
 
 /// Recent downloads card partial.
 pub async fn video_card() -> Markup {
-    match get_hofvarpnir_status(Some(3)).await {
+    match get_hofvarpnir_status(Some(6)).await {
         Ok(status) => card("video", "Recent Downloads", None, video_body(&status)),
         Err(e) => card_error("video", "Recent Downloads", None, &e.to_string()),
     }
