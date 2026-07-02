@@ -27,7 +27,7 @@ use tower_http::trace::TraceLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 use dashboard_app::views;
-use dashboard_app::{DashboardConfig, SearchEngine, SearchEngineKind};
+use dashboard_app::{DashboardConfig, Icon, QuickLink, SearchEngine, SearchEngineKind};
 
 /// How often the shared SSE stream re-renders every card. Per-service `moka`
 /// caches dedupe upstream calls, so this can stay snappy.
@@ -35,7 +35,7 @@ const SSE_INTERVAL: Duration = Duration::from_secs(15);
 
 /// Card ids in display order. Each doubles as the SSE event name and the
 /// `/card/{id}` route segment.
-const CARD_IDS: [&str; 3] = ["weather", "video", "health"];
+const CARD_IDS: [&str; 4] = ["weather", "video", "health", "links"];
 
 /// Shared handler state: the display config the fetchers need per render.
 #[derive(Clone)]
@@ -76,6 +76,15 @@ async fn main() -> Result<()> {
             longitude: config.weather.longitude,
             location_name: config.weather.location.clone(),
             search: config.search.engine(),
+            quick_links: config
+                .quick_links
+                .iter()
+                .map(|l| QuickLink {
+                    name: l.name.clone(),
+                    url: l.url.clone(),
+                    icon: l.icon.clone().map(Icon::from_config),
+                })
+                .collect(),
         },
     };
 
@@ -149,6 +158,7 @@ async fn render_card(cfg: &DashboardConfig, id: &str) -> Option<Markup> {
         "weather" => views::weather_card(cfg).await,
         "video" => views::video_card().await,
         "health" => views::health_card().await,
+        "links" => views::quick_links_card(cfg),
         _ => return None,
     };
     Some(markup)
@@ -173,6 +183,8 @@ struct ServerConfig {
     hofvarpnir: HofvarpnirConfig,
     #[serde(default)]
     health_checks: Vec<HealthCheckConfig>,
+    #[serde(default)]
+    quick_links: Vec<QuickLinkConfig>,
 }
 
 /// `[search]` config: which web-search engine the header box submits to.
@@ -226,6 +238,15 @@ impl Default for WeatherConfig {
 struct HofvarpnirConfig {
     url: Option<String>,
     api_key: Option<String>,
+}
+
+/// `[[quick_links]]` config: a static shortcut shown in the Quick Links card.
+#[derive(Debug, serde::Deserialize)]
+struct QuickLinkConfig {
+    name: String,
+    url: String,
+    #[serde(default)]
+    icon: Option<String>,
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]

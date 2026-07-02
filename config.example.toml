@@ -50,3 +50,22 @@ timeout_ms = 5000
 name = "Nextcloud"
 url = "https://cloud.local/status.php"
 timeout_ms = 5000
+
+# Quick links - static shortcuts shown in the Quick Links card.
+# The dashboard only links to these (they open in a new tab); it never
+# contacts the URL. `icon` is optional and accepts either an inline emoji
+# or an http(s) image URL (e.g. an SVG from dashboard-icons).
+[[quick_links]]
+name = "Grafana"
+url = "https://grafana.local"
+icon = "📊"
+
+[[quick_links]]
+name = "Proxmox"
+url = "https://proxmox.local:8006"
+icon = "🖥️"
+
+[[quick_links]]
+name = "Jellyfin"
+url = "https://jellyfin.local"
+icon = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jellyfin.svg"
