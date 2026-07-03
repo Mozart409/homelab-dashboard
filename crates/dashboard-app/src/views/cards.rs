@@ -140,6 +140,44 @@ pub async fn health_card() -> Markup {
     }
 }
 
+/// Health card in its initial, pre-probe state: renders the configured service
+/// names with a neutral "checking" status. The first SSE frame replaces this
+/// with live statuses once the probe round completes.
+#[must_use]
+pub fn health_placeholder_card(names: &[String]) -> Markup {
+    card(
+        "health",
+        "Service Health",
+        Some("🩺"),
+        health_placeholder_body(names),
+    )
+}
+
+fn health_placeholder_body(names: &[String]) -> Markup {
+    html! {
+        div class="p-4" {
+            div class="flex items-center gap-2 px-4 py-2 rounded mb-4 text-sm font-medium bg-bg-elevated text-text-muted" {
+                span { "⚪" }
+                span { "Checking services…" }
+            }
+
+            div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-2" {
+                @for name in names {
+                    div class="flex flex-col gap-1 px-4 py-2 bg-bg-elevated rounded border-l-[3px] border-l-text-muted animate-pulse" {
+                        div class="flex items-center gap-2" {
+                            span class="text-xs" { "⚪" }
+                            span class="text-sm font-medium" { (name) }
+                        }
+                        div class="flex items-center gap-2" {
+                            span class="font-mono text-xs text-text-muted" { "—" }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn health_body(overview: &HealthOverview) -> Markup {
     let all_healthy = overview.unhealthy_count == 0;
     html! {

@@ -8,7 +8,7 @@
 
 mod cards;
 
-pub use cards::{health_card, quick_links_card, video_card, weather_card};
+pub use cards::{health_card, health_placeholder_card, quick_links_card, video_card, weather_card};
 
 use crate::{DashboardConfig, SearchEngine};
 use maud::{DOCTYPE, Markup, PreEscaped, html};
@@ -83,9 +83,17 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
                             (card_shell("video", "Recent Downloads", None))
                         }
 
-                        // Bottom row: Health checks
+                        // Bottom row: Health checks — names are static config, so
+                        // render neutral rows now; the SSE frame colors them once
+                        // the first probe round completes.
                         section class="grid gap-6" {
-                            (card_shell("health", "Service Health", Some("🩺")))
+                            div id="card-health"
+                                class="bg-bg-card border border-border rounded-xl overflow-hidden"
+                                sse-swap="health"
+                                hx-swap="morph:innerHTML"
+                            {
+                                (health_placeholder_card(&cfg.health_check_names))
+                            }
                         }
                     }
 
