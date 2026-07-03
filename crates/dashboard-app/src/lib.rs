@@ -31,6 +31,10 @@ pub struct DashboardConfig {
     pub search: Option<SearchEngine>,
     /// Static shortcuts rendered in the Quick Links card.
     pub quick_links: Vec<QuickLink>,
+    /// Configured service-health names, in probe order. Used to render the
+    /// health card's neutral placeholder rows before the first probe completes;
+    /// the live statuses arrive over SSE.
+    pub health_check_names: Vec<String>,
 }
 
 impl Default for DashboardConfig {
@@ -41,6 +45,7 @@ impl Default for DashboardConfig {
             location_name: "Berlin".to_string(),
             search: None,
             quick_links: Vec::new(),
+            health_check_names: Vec::new(),
         }
     }
 }

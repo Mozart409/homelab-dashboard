@@ -85,6 +85,11 @@ async fn main() -> Result<()> {
                     icon: l.icon.clone().map(Icon::from_config),
                 })
                 .collect(),
+            health_check_names: config
+                .health_checks
+                .iter()
+                .map(|c| c.name.clone())
+                .collect(),
         },
     };
 
