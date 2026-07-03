@@ -65,9 +65,16 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
                     }
 
                     div hx-ext="sse,morph" sse-connect="/events" class="flex-1 flex flex-col gap-8" {
-                        // Top row: Quick links
+                        // Top row: Quick links — static config, so render the real
+                        // body at load time; the SSE frame morphs identically over it.
                         section class="grid gap-6" {
-                            (card_shell("links", "Quick Links", Some("🔗")))
+                            div id="card-links"
+                                class="bg-bg-card border border-border rounded-xl overflow-hidden"
+                                sse-swap="links"
+                                hx-swap="morph:innerHTML"
+                            {
+                                (quick_links_card(cfg))
+                            }
                         }
 
                         // Weather + Recent videos
