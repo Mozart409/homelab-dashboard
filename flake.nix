@@ -34,7 +34,7 @@
           };
         };
 
-        rustToolchain = pkgs.rust-bin.stable."1.96.0".default;
+        rustToolchain = pkgs.rust-bin.stable."1.96.1".default;
 
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
 
