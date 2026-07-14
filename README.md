@@ -34,7 +34,7 @@ A self-hosted dashboard for monitoring homelab services, built with **Leptos** a
 
 ### Prerequisites
 
-- Rust 1.75+ with `wasm32-unknown-unknown` target
+- Rust 1.96.1+ with `wasm32-unknown-unknown` target
 - [cargo-leptos](https://github.com/leptos-rs/cargo-leptos)
 
 ```bash
