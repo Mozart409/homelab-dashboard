@@ -85,6 +85,10 @@ pub struct HofvarpnirVideo {
     pub platform_video_id: String,
     /// Platform name (e.g., "youtube").
     pub platform: String,
+    /// Effective name of the source this video came from: the user's custom
+    /// name, falling back to the channel/playlist title. `None` when the API
+    /// reports neither.
+    pub source_name: Option<String>,
     /// Thumbnail URL provided by the API.
     pub thumbnail_url: Option<String>,
     /// When the video was downloaded.

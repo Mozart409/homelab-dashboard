@@ -31,6 +31,16 @@ pub async fn get_hofvarpnir_status(limit: Option<u32>) -> Result<HofvarpnirStatu
         downloaded_at: Option<DateTime<Utc>>,
         published_at: Option<DateTime<Utc>>,
         thumbnail_url: Option<String>,
+        /// Source's effective display name: `custom_name`, falling back to
+        /// `channel_title`, then the source URL. Matches Hofvarpnir's web UI.
+        #[serde(default)]
+        source_display_name: Option<String>,
+        /// User-provided custom name for the source, if set.
+        #[serde(default)]
+        source_custom_name: Option<String>,
+        /// Channel/playlist title as reported by the platform.
+        #[serde(default)]
+        source_channel_title: Option<String>,
     }
 
     /// Response from `/api/v1/system/status`.
@@ -106,6 +116,18 @@ pub async fn get_hofvarpnir_status(limit: Option<u32>) -> Result<HofvarpnirStatu
             title: item.title,
             platform_video_id: item.platform_video_id,
             platform: item.platform,
+            // Prefer the custom name, then the channel/playlist title. The
+            // API's own `source_display_name` degrades to the raw source URL
+            // when neither is set, so only accept it when it isn't one.
+            source_name: item
+                .source_custom_name
+                .or(item.source_channel_title)
+                .or_else(|| {
+                    item.source_display_name
+                        .filter(|n| !n.starts_with("http://") && !n.starts_with("https://"))
+                })
+                .map(|n| n.trim().to_string())
+                .filter(|n| !n.is_empty()),
             thumbnail_url: item.thumbnail_url,
             downloaded_at: item.downloaded_at,
             published_at: item.published_at,
