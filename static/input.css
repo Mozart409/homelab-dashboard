@@ -1,5 +1,9 @@
-@import "tailwindcss";
-@source "../crates";
+/* `source(none)` disables Tailwind's automatic content detection, which would
+ * otherwise crawl (and, under --watch, keep watching) the whole project root.
+ * Only the two crates that actually render maud markup are scanned. */
+@import "tailwindcss" source(none);
+@source "../crates/dashboard-app/src";
+@source "../crates/dashboard-server/src";
 
 /* Homelab Dashboard Theme - Tailwind CSS v4
  * A dark, terminal-inspired aesthetic for homelab monitoring
