@@ -88,14 +88,18 @@ fn video_body(status: &HofvarpnirStatus) -> Markup {
             @if status.videos.is_empty() {
                 div class="text-center py-4 text-text-muted text-sm" { "No recent downloads" }
             } @else {
-                ul class="flex flex-col gap-4" {
+                // Full-width card: 3 per row, so the 6 fetched videos fill two
+                // rows. Collapses to 2 then 1 column on narrower viewports.
+                ul class="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3" {
                     @for video in &status.videos {
                         @let thumbnail = video.thumbnail_url.clone().unwrap_or_else(|| {
                             format!("https://i.ytimg.com/vi/{}/mqdefault.jpg", video.platform_video_id)
                         });
-                        @let downloaded = video.downloaded_at.map_or_else(
+                        @let fmt_ts = |dt: chrono::DateTime<chrono::Utc>| dt.format("%b %d, %H:%M").to_string();
+                        @let uploaded = video.published_at.map(fmt_ts);
+                        @let archived = video.downloaded_at.map_or_else(
                             || "Unknown".to_string(),
-                            |dt| dt.format("%b %d, %H:%M").to_string(),
+                            fmt_ts,
                         );
                         li class="flex gap-4" {
                             div class="relative shrink-0 w-[120px] h-[68px] bg-bg-elevated rounded overflow-hidden" {
@@ -108,29 +112,35 @@ fn video_body(status: &HofvarpnirStatus) -> Markup {
                             }
                             div class="flex-1 min-w-0" {
                                 div class="text-sm font-medium text-text-primary truncate mb-1" title=(video.title) { (video.title) }
+                                // The channel/playlist (or its custom name) is the
+                                // useful label, so it gets the accent. Without one,
+                                // the platform stands in.
                                 @match video.source_name.as_deref() {
-                                    // The channel/playlist (or its custom name) is the
-                                    // useful label, so it gets the accent; the platform
-                                    // drops to the muted metadata line beside the date.
-                                    Some(name) => {
-                                        div class="text-sm font-semibold text-accent-cyan truncate mb-1" title=(name) { (name) }
-                                        div class="text-[0.7rem] text-text-muted font-mono" {
-                                            (downloaded) " · " (video.platform)
-                                        }
+                                    Some(name) => div class="text-sm font-semibold text-accent-cyan truncate mb-1" title=(name) { (name) },
+                                    None => div class="text-xs text-text-secondary mb-1" { (video.platform) },
+                                }
+                                // Upload date first, then when we archived it. Both
+                                // labels are 8 characters, so the dates line up in
+                                // the mono face without explicit columns. `Uploaded`
+                                // is omitted when the API has no publish date.
+                                div class="text-xs font-mono text-text-secondary leading-relaxed" {
+                                    @if let Some(uploaded) = uploaded {
+                                        div { "Uploaded " span class="text-text-primary" { (uploaded) } }
                                     }
-                                    None => {
-                                        div class="text-xs text-text-secondary mb-1" { (video.platform) }
-                                        div class="text-[0.7rem] text-text-muted font-mono" { (downloaded) }
-                                    }
+                                    div { "Archived " span class="text-text-primary" { (archived) } }
                                 }
                             }
                         }
                     }
                 }
             }
-            div class="flex justify-between pt-4 border-t border-border-subtle text-xs" {
-                span class="text-text-muted" { "Total downloads:" }
-                span class="text-text-secondary font-mono" { (status.total_downloads) }
+            // Stat, not a table row: the count leads at full contrast with its
+            // label trailing it. `justify-between` used to fling the number to
+            // the far edge of a now full-width card, stranding it from the text
+            // it belongs to.
+            div class="flex items-baseline gap-2 mt-4 pt-4 border-t border-border-subtle" {
+                span class="font-mono text-lg font-semibold text-text-primary" { (status.total_downloads) }
+                span class="text-xs text-text-muted" { "videos archived" }
             }
         }
     }

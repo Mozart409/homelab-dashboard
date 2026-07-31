@@ -30,6 +30,25 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const GIT_HASH: &str = env!("GIT_HASH");
 const BUILD_TIME: &str = env!("BUILD_TIME");
 
+/// Cache-busting token for the compiled stylesheet, derived from its size and
+/// mtime. Deliberately *not* `GIT_HASH`: that only moves on commit, so every
+/// `just css` / `css-watch` rebuild kept serving the browser its cached copy
+/// under an unchanged `?v=`. Stat-per-render is cheap and always correct.
+fn css_version() -> String {
+    let dir = std::env::var("DASHBOARD_STATIC_DIR").unwrap_or_else(|_| "static".to_owned());
+    std::fs::metadata(std::path::Path::new(&dir).join("dashboard.css"))
+        .ok()
+        .and_then(|meta| {
+            let mtime = meta
+                .modified()
+                .ok()?
+                .duration_since(std::time::UNIX_EPOCH)
+                .ok()?;
+            Some(format!("{:x}-{:x}", meta.len(), mtime.as_secs()))
+        })
+        .unwrap_or_else(|| GIT_HASH.to_owned())
+}
+
 /// All cards rendered on the dashboard, in display order.
 /// `(id, title, icon)` — `id` doubles as the SSE event name and `/card/{id}` route.
 pub const CARDS: [(&str, &str, Option<&str>); 4] = [
@@ -50,7 +69,7 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
                 meta name="viewport" content="width=device-width, initial-scale=1";
                 title { "Homelab Dashboard" }
                 link rel="icon" href="https://fav.farm/🏠";
-                link rel="stylesheet" href=(format!("/dashboard.css?v={GIT_HASH}"));
+                link rel="stylesheet" href=(format!("/dashboard.css?v={}", css_version()));
                 script src=(HTMX_SRC) integrity=(HTMX_INTEGRITY) crossorigin="anonymous" {}
                 script src=(HTMX_SSE_SRC) crossorigin="anonymous" {}
                 script src=(IDIOMORPH_SRC) crossorigin="anonymous" {}
@@ -77,16 +96,18 @@ pub fn page(cfg: &DashboardConfig) -> Markup {
                             }
                         }
 
-                        // Weather + Recent videos
-                        section class="grid gap-6 grid-cols-1 lg:grid-cols-[300px_1fr]" {
-                            (card_shell("weather", "Weather", None))
+                        // Recent downloads, full width (3 per row × 2).
+                        section class="grid gap-6" {
                             (card_shell("video", "Recent Downloads", None))
                         }
 
-                        // Bottom row: Health checks — names are static config, so
-                        // render neutral rows now; the SSE frame colors them once
-                        // the first probe round completes.
-                        section class="grid gap-6" {
+                        // Bottom row: Weather + Health checks. Grid items stretch
+                        // by default, so both cards share the height of the taller
+                        // one. Health names are static config, so render neutral
+                        // rows now; the SSE frame colors them once the first probe
+                        // round completes.
+                        section class="grid gap-6 grid-cols-1 lg:grid-cols-[300px_1fr]" {
+                            (card_shell("weather", "Weather", None))
                             div id="card-health"
                                 class="bg-bg-card border border-border rounded-xl overflow-hidden"
                                 sse-swap="health"
