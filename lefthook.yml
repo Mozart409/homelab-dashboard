@@ -1,6 +1,8 @@
 pre-commit:
   parallel: true
   commands:
+    just-fmt:
+      run: just --fmt
     keep_sorted:
       glob: "*.{nix,yml,yaml,toml,rs}"
       run: keep-sorted {staged_files}
