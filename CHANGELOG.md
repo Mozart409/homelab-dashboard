@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.2.0 - 2026-07-31
+#### Features
+- (**deps**) upgrade cargo deps - (c0afb77) - Amadeus Mader
+#### Refactoring
+- (**tests**) refactor for testing - (63cf209) - Amadeus Mader
+
+- - -
+
 ## v0.1.0 - 2026-07-31
 #### Features
 - (**cog**) move release workflow to cog - (e65562e) - Amadeus Mader
