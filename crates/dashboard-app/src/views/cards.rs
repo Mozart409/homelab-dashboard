@@ -108,8 +108,21 @@ fn video_body(status: &HofvarpnirStatus) -> Markup {
                             }
                             div class="flex-1 min-w-0" {
                                 div class="text-sm font-medium text-text-primary truncate mb-1" title=(video.title) { (video.title) }
-                                div class="text-xs text-text-secondary mb-1" { (video.platform) }
-                                div class="text-[0.7rem] text-text-muted font-mono" { (downloaded) }
+                                @match video.source_name.as_deref() {
+                                    // The channel/playlist (or its custom name) is the
+                                    // useful label, so it gets the accent; the platform
+                                    // drops to the muted metadata line beside the date.
+                                    Some(name) => {
+                                        div class="text-sm font-semibold text-accent-cyan truncate mb-1" title=(name) { (name) }
+                                        div class="text-[0.7rem] text-text-muted font-mono" {
+                                            (downloaded) " · " (video.platform)
+                                        }
+                                    }
+                                    None => {
+                                        div class="text-xs text-text-secondary mb-1" { (video.platform) }
+                                        div class="text-[0.7rem] text-text-muted font-mono" { (downloaded) }
+                                    }
+                                }
                             }
                         }
                     }
