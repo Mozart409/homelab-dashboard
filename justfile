@@ -57,6 +57,9 @@ run *ARGS:
 watch:
     cargo watch -x 'run -p dashboard-server'
 
+dev:
+    cargo watch -x 'run -p dashboard-server'
+
 # Watch sources and re-check on change
 watch-check:
     cargo watch -x check
@@ -78,5 +81,6 @@ css:
     tailwindcss -i static/input.css -o static/dashboard.css
 
 # Watch and rebuild the Tailwind CSS on change
+# Watched paths are the `@source` entries in static/input.css, not the repo root.
 css-watch:
     tailwindcss -i static/input.css -o static/dashboard.css --watch
