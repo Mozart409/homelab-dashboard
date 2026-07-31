@@ -19,7 +19,6 @@ allow = [
   "MIT",
   "Apache-2.0",
   "Apache-2.0 WITH LLVM-exception",
-  "BSD-2-Clause",
   "BSD-3-Clause",
   "ISC",
   "Zlib",
@@ -39,10 +38,7 @@ allow-wildcard-paths = true
 # Known transitive duplicates we can't resolve without upstream bumps. Skipping
 # the older copies leaves a single counted version, silencing the dup warning.
 skip = [
-  { crate = "getrandom@0.2.17", reason = "pulled by older transitive deps alongside 0.3/0.4" },
-  { crate = "getrandom@0.3.4", reason = "pulled by transitive deps alongside 0.4" },
-  { crate = "windows-sys@0.52.0", reason = "transitive; newer deps use 0.61" },
-  { crate = "r-efi@5.3.0", reason = "transitive; newer deps use 6.0" },
+  { crate = "tower-http@0.6.11", reason = "reqwest 0.13 pins 0.6; we depend on 0.7 directly" },
 ]
 
 [sources]
