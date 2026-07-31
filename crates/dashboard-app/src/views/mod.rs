@@ -260,3 +260,201 @@ pub fn refresh_icon() -> Markup {
             .to_string(),
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        CARDS, DashboardConfig, SearchEngine, card, card_error, card_header, page, search_box,
+        skeleton,
+    };
+    use crate::SearchEngineKind;
+    use maud::html;
+
+    /// The one row `skeleton` repeats; counting it counts the rows.
+    const SKELETON_ROW: &str = r#"<div class="w-full h-8 bg-bg-elevated rounded mb-2"></div>"#;
+
+    fn searxng() -> SearchEngine {
+        SearchEngine {
+            kind: SearchEngineKind::Searxng,
+            url: "https://s.io".to_owned(),
+        }
+    }
+
+    // --------------------------------------------------------- card_header
+
+    #[test]
+    fn card_header_renders_icon_when_present() {
+        let s = card_header("health", "Service Health", Some("🩺")).into_string();
+        assert!(s.contains(r#"<span class="text-lg">🩺</span>"#), "{s}");
+        assert!(s.contains("Service Health"), "{s}");
+    }
+
+    #[test]
+    fn card_header_omits_icon_span_when_none() {
+        let s = card_header("weather", "Weather", None).into_string();
+        assert!(!s.contains(r#"class="text-lg""#), "{s}");
+        assert!(s.contains("Weather"), "{s}");
+    }
+
+    #[test]
+    fn card_header_wires_htmx_refresh_attributes() {
+        let s = card_header("weather", "Weather", None).into_string();
+        assert!(s.contains(r#"hx-get="/card/weather""#), "{s}");
+        assert!(s.contains(r##"hx-target="#card-weather""##), "{s}");
+        assert!(s.contains(r#"hx-swap="innerHTML""#), "{s}");
+    }
+
+    #[test]
+    fn card_header_escapes_id_and_title() {
+        let id = r#"a"><script>"#;
+        let title = r#"T"<script>alert(1)</script>"#;
+        let s = card_header(id, title, None).into_string();
+
+        assert!(!s.contains("<script>"), "unescaped <script> in {s}");
+        assert!(!s.contains("</script>"), "unescaped </script> in {s}");
+        // The injected quote must not terminate the hx-get attribute early.
+        assert!(!s.contains(r#"hx-get="/card/a">"#), "{s}");
+        assert!(s.contains("&lt;script&gt;"), "{s}");
+        assert!(s.contains("&quot;"), "{s}");
+    }
+
+    // ------------------------------------------------------- card / errors
+
+    #[test]
+    fn card_renders_header_then_body() {
+        let s = card(
+            "links",
+            "Quick Links",
+            Some("🔗"),
+            html! { p { "body-marker" } },
+        )
+        .into_string();
+
+        let header = s.find("Quick Links").expect("header rendered");
+        let body = s.find("body-marker").expect("body rendered");
+        assert!(header < body, "body should follow the header in {s}");
+    }
+
+    #[test]
+    fn card_error_renders_message_with_warning_glyph() {
+        let s = card_error("weather", "Weather", None, "Failed to fetch weather").into_string();
+        assert!(s.contains("⚠️"), "{s}");
+        assert!(s.contains("Failed to fetch weather"), "{s}");
+        assert!(s.contains("text-accent-red"), "{s}");
+    }
+
+    #[test]
+    fn card_error_escapes_the_message() {
+        // Error strings come from reqwest / remote responses, so they are untrusted.
+        let s = card_error(
+            "video",
+            "Recent Downloads",
+            None,
+            r#"<img src=x onerror="alert(1)">"#,
+        )
+        .into_string();
+
+        assert!(!s.contains("<img src=x"), "unescaped markup in {s}");
+        assert!(s.contains("&lt;img src=x"), "{s}");
+    }
+
+    // ------------------------------------------------------------ skeleton
+
+    #[test]
+    fn skeleton_emits_exactly_the_requested_row_count() {
+        for rows in [0_usize, 1, 4, 64] {
+            let s = skeleton(rows).into_string();
+            assert_eq!(s.matches(SKELETON_ROW).count(), rows, "rows = {rows}");
+            assert!(s.contains("animate-pulse"), "rows = {rows}");
+        }
+    }
+
+    // ---------------------------------------------------------- search_box
+
+    #[test]
+    fn search_box_renders_a_get_form_for_a_configured_engine() {
+        let engine = searxng();
+        let s = search_box(Some(&engine)).into_string();
+
+        assert!(s.contains(r#"action="https://s.io/search""#), "{s}");
+        assert!(s.contains(r#"method="get""#), "{s}");
+        assert!(s.contains(r#"name="q""#), "{s}");
+        assert!(s.contains(r#"role="search""#), "{s}");
+        assert!(!s.contains("disabled"), "{s}");
+    }
+
+    #[test]
+    fn search_box_renders_a_disabled_input_without_an_engine() {
+        let s = search_box(None).into_string();
+
+        assert!(s.contains("disabled"), "{s}");
+        assert!(s.contains("Search disabled"), "{s}");
+        assert!(!s.contains("<form"), "{s}");
+    }
+
+    // ---------------------------------------------------------------- page
+
+    #[test]
+    fn page_renders_the_search_form_when_an_engine_is_configured() {
+        let cfg = DashboardConfig {
+            search: Some(searxng()),
+            ..DashboardConfig::default()
+        };
+        let s = page(&cfg).into_string();
+
+        assert!(s.contains(r#"action="https://s.io/search""#), "{s}");
+        assert!(!s.contains("Search disabled"), "{s}");
+    }
+
+    #[test]
+    fn page_renders_the_disabled_search_box_without_an_engine() {
+        let s = page(&DashboardConfig::default()).into_string();
+
+        assert!(s.contains("Search disabled"), "{s}");
+        assert!(!s.contains("<form"), "{s}");
+    }
+
+    #[test]
+    fn page_contains_every_card_shell() {
+        let s = page(&DashboardConfig::default()).into_string();
+
+        for (id, _, _) in CARDS {
+            assert!(
+                s.contains(&format!(r#"id="card-{id}""#)),
+                "missing card-{id}"
+            );
+            assert!(
+                s.contains(&format!(r#"sse-swap="{id}""#)),
+                "missing sse {id}"
+            );
+        }
+    }
+
+    #[test]
+    fn page_renders_the_document_shell() {
+        let s = page(&DashboardConfig::default()).into_string();
+
+        assert!(s.starts_with("<!DOCTYPE html>"), "{s}");
+        assert!(s.contains("<title>Homelab Dashboard</title>"), "{s}");
+        assert!(s.contains(r#"sse-connect="/events""#), "{s}");
+    }
+
+    #[test]
+    fn page_renders_the_health_placeholder_names() {
+        let cfg = DashboardConfig {
+            health_check_names: vec!["Grafana".to_owned(), "Jellyfin".to_owned()],
+            ..DashboardConfig::default()
+        };
+        let s = page(&cfg).into_string();
+
+        assert!(s.contains("Checking services…"), "{s}");
+        assert!(s.contains("Grafana"), "{s}");
+        assert!(s.contains("Jellyfin"), "{s}");
+    }
+
+    #[test]
+    fn page_renders_the_quick_links_empty_state_by_default() {
+        let s = page(&DashboardConfig::default()).into_string();
+        assert!(s.contains("No quick links configured"), "{s}");
+    }
+}
