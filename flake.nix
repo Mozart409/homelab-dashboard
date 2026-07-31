@@ -119,6 +119,7 @@
             # keep-sorted start
             cargo-audit
             cargo-deny
+            cargo-edit
             cargo-watch
             claude-code
             cocogitto
