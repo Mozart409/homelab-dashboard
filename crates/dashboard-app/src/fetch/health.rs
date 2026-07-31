@@ -32,7 +32,7 @@ pub async fn get_health_overview() -> Result<HealthOverview> {
     }
 
     async fn check_endpoint(client: &reqwest::Client, config: HealthCheckConfig) -> HealthCheck {
-        let id = Ulid::new();
+        let id = Ulid::generate();
         let start = Instant::now();
         let timeout = Duration::from_millis(config.timeout_ms);
 
