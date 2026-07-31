@@ -120,6 +120,7 @@
             cargo-audit
             cargo-deny
             cargo-edit
+            cargo-nextest
             cargo-watch
             claude-code
             cocogitto

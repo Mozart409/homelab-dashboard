@@ -31,11 +31,11 @@ pedantic:
 
 # Run all tests (pass extra args after `--`, e.g. `just test config::test_default`)
 test *ARGS:
-    cargo test {{ ARGS }}
+    cargo test --workspace {{ ARGS }}
 
 # Run tests with nextest
 nextest *ARGS:
-    cargo nextest run --hide-progress-bar --failure-output final {{ ARGS }}
+    cargo nextest run --workspace --hide-progress-bar --failure-output final {{ ARGS }}
 
 # Audit dependencies: advisories, licenses, bans, sources
 deny:

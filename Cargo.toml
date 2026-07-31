@@ -59,6 +59,10 @@ moka = { version = "0.12", features = ["future"] }
 # URL encoding (search query proxying)
 urlencoding = "2.1"
 
+# Testing
+http-body-util = "0.1"
+wiremock = "0.6"
+
 [profile.release]
 lto = true
 codegen-units = 1

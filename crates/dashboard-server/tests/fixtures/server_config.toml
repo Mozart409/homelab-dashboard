@@ -1,0 +1,39 @@
+# Fixture for `load_config_from` tests. Deliberately NOT the repo-root
+# config.toml, which is gitignored and holds a live API key.
+
+listen_address = "127.0.0.1"
+port = 9123
+
+[search]
+type = "searxng"
+url = "https://search.example.com"
+
+[weather]
+latitude = 48.14
+longitude = 11.58
+location = "Munich"
+
+[hofvarpnir]
+url = "http://hof.example:8000"
+api_key = "fixture-key"
+
+# First entry sets both optional keys, second omits them so the serde defaults
+# (timeout_ms = 5000, expected_status = None) are exercised.
+[[health_checks]]
+name = "Grafana"
+url = "http://grafana.example/api/health"
+timeout_ms = 1500
+expected_status = 204
+
+[[health_checks]]
+name = "Prometheus"
+url = "http://prometheus.example/-/healthy"
+
+[[quick_links]]
+name = "Grafana"
+url = "http://grafana.example"
+icon = "📊"
+
+[[quick_links]]
+name = "Router"
+url = "http://192.168.1.1"

@@ -130,3 +130,138 @@ impl SearchEngine {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // `DashboardConfig::default` stores exact literals, so comparing them back
+    // with `==` is the assertion, not an approximation.
+    #![allow(clippy::float_cmp)]
+
+    use super::{DashboardConfig, Icon, SearchEngine, SearchEngineKind};
+
+    fn searxng(url: &str) -> SearchEngine {
+        SearchEngine {
+            kind: SearchEngineKind::Searxng,
+            url: url.to_owned(),
+        }
+    }
+
+    // ---------------------------------------------------------------- Icon
+
+    #[test]
+    fn from_config_classifies_http_urls_as_image() {
+        assert!(matches!(
+            Icon::from_config("http://cdn.example.com/grafana.svg".to_owned()),
+            Icon::Image(url) if url == "http://cdn.example.com/grafana.svg"
+        ));
+    }
+
+    #[test]
+    fn from_config_classifies_https_urls_as_image() {
+        assert!(matches!(
+            Icon::from_config("https://cdn.example.com/grafana.svg".to_owned()),
+            Icon::Image(url) if url == "https://cdn.example.com/grafana.svg"
+        ));
+    }
+
+    #[test]
+    fn from_config_classifies_glyphs_as_text() {
+        assert!(matches!(
+            Icon::from_config("📊".to_owned()),
+            Icon::Text(glyph) if glyph == "📊"
+        ));
+    }
+
+    #[test]
+    fn from_config_classifies_empty_string_as_text() {
+        assert!(matches!(
+            Icon::from_config(String::new()),
+            Icon::Text(glyph) if glyph.is_empty()
+        ));
+    }
+
+    #[test]
+    fn from_config_scheme_match_is_case_sensitive() {
+        // Uppercase schemes are legal URLs but fall through to the text branch.
+        assert!(matches!(
+            Icon::from_config("HTTPS://X".to_owned()),
+            Icon::Text(glyph) if glyph == "HTTPS://X"
+        ));
+    }
+
+    #[test]
+    fn from_config_classifies_non_http_schemes_as_text() {
+        for raw in ["ftp://x", "//cdn/x.svg", "httpsfoo"] {
+            assert!(
+                matches!(Icon::from_config(raw.to_owned()), Icon::Text(_)),
+                "{raw} should classify as Text"
+            );
+        }
+    }
+
+    #[test]
+    fn from_config_does_not_trim_leading_whitespace() {
+        // No `.trim()` before the prefix check, so a stray space demotes a URL.
+        assert!(matches!(
+            Icon::from_config(" https://x".to_owned()),
+            Icon::Text(glyph) if glyph == " https://x"
+        ));
+    }
+
+    // -------------------------------------------------------- SearchEngine
+
+    #[test]
+    fn action_url_appends_search_path() {
+        assert_eq!(searxng("https://s.io").action_url(), "https://s.io/search");
+    }
+
+    #[test]
+    fn action_url_normalizes_trailing_slashes() {
+        for base in ["https://s.io", "https://s.io/", "https://s.io///"] {
+            assert_eq!(
+                searxng(base).action_url(),
+                "https://s.io/search",
+                "base {base} should normalize to a single /search"
+            );
+        }
+    }
+
+    #[test]
+    fn action_url_yields_exactly_one_search_segment() {
+        for base in ["https://s.io", "https://s.io/", "https://s.io///", "", "/"] {
+            let url = searxng(base).action_url();
+            assert!(url.ends_with("/search"), "{base} -> {url}");
+            assert!(!url.ends_with("//search"), "{base} -> {url}");
+            assert_eq!(url.matches("/search").count(), 1, "{base} -> {url}");
+        }
+    }
+
+    #[test]
+    fn action_url_handles_empty_and_root_bases() {
+        assert_eq!(searxng("").action_url(), "/search");
+        assert_eq!(searxng("/").action_url(), "/search");
+    }
+
+    #[test]
+    fn query_param_for_searxng_is_q() {
+        assert_eq!(searxng("https://s.io").query_param(), "q");
+    }
+
+    // ----------------------------------------------------- DashboardConfig
+
+    #[test]
+    fn default_config_points_at_berlin() {
+        let cfg = DashboardConfig::default();
+        assert_eq!(cfg.latitude, 52.52);
+        assert_eq!(cfg.longitude, 13.41);
+        assert_eq!(cfg.location_name, "Berlin");
+    }
+
+    #[test]
+    fn default_config_has_no_search_and_no_entries() {
+        let cfg = DashboardConfig::default();
+        assert!(cfg.search.is_none());
+        assert!(cfg.quick_links.is_empty());
+        assert!(cfg.health_check_names.is_empty());
+    }
+}

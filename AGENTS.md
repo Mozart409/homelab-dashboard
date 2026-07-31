@@ -63,7 +63,10 @@ homelab-dashboard/
     │       ├── types.rs     # Shared data types (Serialize/Deserialize)
     │       ├── fetch/       # Async service fetchers (API proxies + moka cache)
     │       └── views/       # Maud views (page shell, card partials, search)
-    └── dashboard-server/   # Axum binary (main.rs): routes, SSE, config loading
+    └── dashboard-server/   # Axum server
+        ├── src/lib.rs       # Routes, SSE, config loading, build_router
+        ├── src/main.rs      # Thin binary: setup -> build_router -> serve
+        └── tests/           # Route integration tests (tower::oneshot)
 ```
 
 ## Architecture Notes
@@ -76,8 +79,11 @@ homelab-dashboard/
   fixed interval (`SSE_INTERVAL` in `main.rs`); htmx swaps each card's
   `innerHTML` by event name. `/card/{id}` serves the same partial for manual
   refresh.
-- **Fetchers:** `fetch/*` are plain async functions that proxy external APIs
-  (hiding credentials), with per-service `moka` caches. They return
+- **Fetchers:** `fetch/*` are split in two. A **public wrapper** owns the
+  environment reads and the `moka` cache; it delegates to a `pub(crate)` **inner
+  fn** that takes the base URL / config explicitly and does no env access and no
+  caching. Tests target the inner fn against a `wiremock` server, so they need no
+  environment variables and touch no global state. Both return
   `color_eyre::Result<T>`.
 - **Views:** `views/*` turn fetched data (or an error) into Maud `Markup`. Fetch
   errors render an inline error body rather than failing the request.
@@ -208,9 +214,13 @@ editing use `just css-watch` (or `just dev`).
 2. Add a `new_service_card(...) -> Markup` view in `views/cards.rs`, exported
    from `views/mod.rs`.
 3. Register the card id in **all three** places that drive the card list:
-   - `CARD_IDS` in `dashboard-server/src/main.rs` (SSE order + route)
-   - the `match` in `render_card` (`main.rs`)
+   - `CARD_IDS` in `dashboard-server/src/lib.rs` (SSE order + route)
+   - the `match` in `render_card` (`lib.rs`)
    - `CARDS` + the page grid in `views/mod.rs` (`page`)
+
+   A unit test in `dashboard-server/src/lib.rs` asserts these lists agree as
+   sets, so missing one of the three fails the suite rather than silently
+   dropping the card.
 
 ### Adding a New Fetcher (no card)
 
