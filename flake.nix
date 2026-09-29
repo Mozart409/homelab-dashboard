@@ -4,37 +4,43 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
     };
 
     crane = {
       url = "github:ipetkov/crane";
     };
 
-    flake-utils.url = "github:numtide/flake-utils";
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = {
+  outputs = inputs @ {
     self,
     nixpkgs,
-    rust-overlay,
+    flake-parts,
+    fenix,
     crane,
-    flake-utils,
     ...
   }:
-    flake-utils.lib.eachDefaultSystem (
-      system: let
-        overlays = [(import rust-overlay)];
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
+
+      perSystem = {system, ...}: let
         pkgs = import nixpkgs {
-          inherit system overlays;
-          config = {
-            allowUnfree = true;
-          };
+          inherit system;
+          config.allowUnfree = true;
         };
 
-        rustToolchain = pkgs.rust-bin.stable."1.96.1".default;
+        rustToolchain = fenix.packages.${system}.stable.toolchain;
 
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
 
@@ -124,13 +130,13 @@
             cargo-watch
             claude-code
             cocogitto
+            fenix.packages.${system}.stable.rust-analyzer
             just
             keep-sorted
             lefthook
             lldb
             opencode
             playwright-driver.browsers
-            rust-analyzer
             rustToolchain
             tailwindcss_4
             # keep-sorted end
@@ -154,14 +160,15 @@
             echo ""
           '';
         };
-      }
-    )
-    // {
-      # Cross-system outputs
-      nixosModules.default = import ./module.nix;
+      };
 
-      overlays.default = final: prev: {
-        homelab-dashboard = self.packages.${prev.system}.default;
+      # Cross-system outputs
+      flake = {
+        nixosModules.default = import ./module.nix;
+
+        overlays.default = final: prev: {
+          homelab-dashboard = self.packages.${prev.system}.default;
+        };
       };
     };
 }
