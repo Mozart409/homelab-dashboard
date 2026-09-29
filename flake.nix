@@ -128,14 +128,12 @@
             cargo-edit
             cargo-nextest
             cargo-watch
-            claude-code
             cocogitto
             fenix.packages.${system}.stable.rust-analyzer
             just
             keep-sorted
             lefthook
             lldb
-            opencode
             playwright-driver.browsers
             rustToolchain
             tailwindcss_4
