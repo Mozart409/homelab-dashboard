@@ -9,53 +9,51 @@ A self-hosted homelab dashboard built with:
 - **HTML templating:** Maud (compile-time `html!` macros)
 - **Interactivity:** htmx 2.x over a shared Server-Sent Events (SSE) stream
 - **Styling:** Tailwind CSS v4
-- **Build System:** Nix flakes + crane; `just` + `cargo-watch` for development
+- **Build System:** crane via the yggdrasil root flake (`nix/default.nix`, shared toolchain `rust/toolchain.nix`); root `just` recipes + `cargo-watch` for development
 
 ## Build/Lint/Test Commands
 
-All day-to-day commands run through `just` (see `justfile`). Run `just` with no
-args to list every recipe.
+This project lives in the yggdrasil monorepo and has no tooling of its own:
+the dev shell, `justfile`, lefthook and cog are the root ones. Run recipes from
+the repo root (`just --list | grep hdash`).
 
 ```bash
 # Development
-just dev                              # Watch: server + Tailwind CSS together
-just watch                            # Watch: rebuild + rerun the server only
-just run                              # Run the server once (localhost:8080)
-just css-watch                        # Watch + rebuild Tailwind CSS only
+just hdash-dev                        # Build the CSS, then rerun the server on changes
+just hdash-run                        # Build the CSS, run the server once (localhost:8080)
+just hdash-css-watch                  # Watch + rebuild Tailwind CSS only
+just hdash-css                        # Build static/dashboard.css once
 
 # Testing
-just test                             # Run all tests
-just test <name>                      # Run a single test by name (extra args forwarded)
-just nextest                          # Run tests with nextest
+just hdash-test                       # Run all tests
+just hdash-test <name>                # Run a single test by name (extra args forwarded)
+just hdash-nextest                    # Run tests with nextest
 
 # Linting & Formatting
-just fmt                              # Format code
-just fmt-check                        # Check formatting without writing
-just clippy                           # Lint (default target)
-just pedantic                         # Strict clippy (matches CI gate)
+just hdash-fmt                        # Format code
+just hdash-fmt-check                  # Check formatting without writing
+just hdash-clippy                     # Strict clippy (pedantic/cargo/nursery, -D warnings)
+just hdash-deny                       # cargo deny
+just hdash-ci                         # fmt check + clippy + tests + deny (the old pre-push gate)
 
-# CSS
-just css                              # Build static/dashboard.css once
-
-# Git Hooks (via lefthook, auto-installed by the flake devShell)
-lefthook run pre-commit               # keep-sorted + fmt + clippy fix + css build + build
-lefthook run commit-msg               # cog verify (conventional commits)
-lefthook run pre-push                 # test + fmt check + strict clippy
+# Nix (from the repo root)
+nix build .#homelab-dashboard         # The package the `containers` host runs
 ```
+
+The root hooks do not run cargo: run `just hdash-ci` before pushing.
 
 ## Project Structure
 
 ```
 homelab-dashboard/
 ├── Cargo.toml              # Workspace root (Axum + Maud + htmx deps)
-├── justfile                # Dev/test/lint recipes
-├── flake.nix               # Nix flake for builds/dev shell
-├── cog.toml                # cocogitto (conventional commit) config
-├── lefthook.yml            # Git hooks
+├── nix/
+│   ├── default.nix         # crane build, called by the root flake
+│   └── module.nix          # NixOS module (root: nixosModules.homelab-dashboard)
 ├── config.toml             # Local config (gitignored)
 ├── static/
 │   ├── input.css           # Tailwind v4 source with theme
-│   └── dashboard.css       # Compiled CSS (built by pre-commit hook)
+│   └── dashboard.css       # Compiled CSS for `cargo run` (just hdash-css); Nix builds its own
 └── crates/
     ├── dashboard-app/      # Shared library crate
     │   └── src/
@@ -135,7 +133,7 @@ let response: OpenMeteoResponse = client
 
 ### Clippy Configuration
 
-Strict settings (the `just pedantic` / pre-push gate):
+Strict settings (`just hdash-clippy`, part of `just hdash-ci`):
 `-W clippy::pedantic -W clippy::cargo -W clippy::nursery -D warnings`
 
 Common allows:
@@ -203,7 +201,7 @@ Use Tailwind utility classes directly in Maud `html!` markup (theme tokens like
 html! { div class="bg-bg-card border border-border rounded-xl p-4" { /* ... */ } }
 ```
 The pre-commit hook rebuilds `static/dashboard.css` and stages it; for live
-editing use `just css-watch` (or `just dev`).
+editing use `just hdash-css-watch` (or `just hdash-dev`).
 
 ## Common Tasks
 
@@ -241,10 +239,10 @@ Commits follow Conventional Commits, enforced by `cog verify` (commit-msg hook).
 3. Commit in the house style — a short, lowercase `type(scope): summary`, e.g.
    `feat(links): add quick links card`. Types: `feat`, `fix`, `refactor`,
    `chore`, `docs`, `ci`, `perf`.
-4. The `pre-commit` hook (lefthook) runs keep-sorted, `cargo fmt`, `cargo clippy
-   --fix`, rebuilds/stages `static/dashboard.css`, and builds the workspace — it
-   may re-stage fixed files, so re-check the tree after committing.
+4. The root `pre-commit` hook runs alejandra, keep-sorted, `just --fmt` and
+   shellcheck only; run `just hdash-fmt` (and `just hdash-css` after template
+   changes) yourself before committing.
 5. Run `git` from the real shell, never a sandboxed subprocess: signing needs an
    askpass prompt the sandbox can't provide.
-6. Leave the tree clean; `pre-push` gates on tests, fmt check, strict clippy, and
-   `cargo deny`.
+6. Leave the tree clean and run `just hdash-ci` (tests, fmt check, strict
+   clippy, `cargo deny`) before pushing; no hook does it for you.

@@ -34,7 +34,7 @@ A self-hosted dashboard for monitoring homelab services, built with **Leptos** a
 
 ### Prerequisites
 
-- Rust 1.96.1+ with `wasm32-unknown-unknown` target
+- The yggdrasil root dev shell (stable Rust, Tailwind, cargo tools); run the `hdash-*` recipes from the repo root
 - [cargo-leptos](https://github.com/leptos-rs/cargo-leptos)
 
 ```bash
@@ -67,57 +67,21 @@ cargo leptos build --release
 
 ## NixOS Installation
 
-### Using Flakes
+### In yggdrasil
+
+The root flake builds the package (`nix build .#homelab-dashboard`, from
+`nix/default.nix` with the shared Rust toolchain) and exports
+`nixosModules.homelab-dashboard`, which brings its own overlay. A host imports
+it through `self` (see `infra/hosts/containers/homelab-dashboard`):
 
 ```nix
-# flake.nix
-{
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    homelab-dashboard.url = "github:yourusername/homelab-dashboard";
-  };
-
-  outputs = { self, nixpkgs, homelab-dashboard, ... }: {
-    nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
-      modules = [
-        homelab-dashboard.nixosModules.default
-        ({ pkgs, ... }: {
-          nixpkgs.overlays = [ homelab-dashboard.overlays.default ];
-
-          services.homelab-dashboard = {
-            enable = true;
-
-            settings = {
-              listen_address = "0.0.0.0";
-              port = 8080;
-
-              search = {
-                type = "searxng";
-                url = "https://search.example.com";
-              };
-
-              weather = {
-                latitude = 52.52;
-                longitude = 13.41;
-                location = "Berlin";
-              };
-
-              hofvarpnir.url = "https://hofvarpnir.local";
-
-              health_checks = [
-                { name = "Router"; url = "http://192.168.1.1"; }
-                { name = "NAS"; url = "http://nas.local:5000"; }
-              ];
-            };
-
-            # Load secrets from a file
-            secretsFile = "/run/secrets/dashboard-env";
-
-            openFirewall = true;
-          };
-        })
-      ];
+{self, ...}: {
+  imports = [self.nixosModules.homelab-dashboard];
+  services.homelab-dashboard = {
+    enable = true;
+    settings = {
+      listen_address = "127.0.0.1";
+      port = 8084;
     };
   };
 }
@@ -165,8 +129,9 @@ homelab-dashboard/
 │   │       └── types.rs     # Shared types
 │   └── dashboard-server/  # Axum binary
 ├── static/                # CSS and static assets
-├── flake.nix             # Nix flake
-└── module.nix            # NixOS module
+└── nix/
+    ├── default.nix       # crane build, called by the root flake
+    └── module.nix        # NixOS module
 ```
 
 ### Adding a New Service Card
@@ -175,7 +140,7 @@ homelab-dashboard/
 2. Create server function in `crates/dashboard-app/src/server/`
 3. Create component in `crates/dashboard-app/src/components/`
 4. Add to `App` in `crates/dashboard-app/src/app.rs`
-5. Add config to `module.nix` if needed
+5. Add config to `nix/module.nix` if needed
 
 ## Tech Stack
 
