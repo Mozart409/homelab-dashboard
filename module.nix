@@ -66,7 +66,7 @@ in {
             type = lib.types.submodule {
               options = {
                 type = lib.mkOption {
-                  type = lib.types.enum [ "searxng" ];
+                  type = lib.types.enum ["searxng"];
                   default = "searxng";
                   description = "Search engine the header box submits to.";
                 };
