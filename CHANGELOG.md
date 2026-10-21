@@ -2,6 +2,23 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.2.1 - 2026-10-21
+#### Features
+- (**dashboard**) standalone flake for the github export - (408c9fd) - Amadeus Mader
+- (**dashboard**) build homelab-dashboard in-repo and drop its flake input - (6f4019e) - Amadeus Mader
+#### Bug Fixes
+- (**dashboard**) bump rustls, rustls-webpki, webpki-root-certs and yoke-derive for RUSTSEC advisories and a yanked crate - (431bc1a) - Amadeus Mader
+#### Refactoring
+- (**nix**) use flake-parts and fenix - (f25a42d) - Amadeus Mader
+#### Miscellaneous Chores
+- (**cargo**) upgrade crates - (c010baa) - Amadeus Mader
+- (**dashboard**) source the root env - (637a8a4) - Amadeus Mader
+- (**dashboard**) import homelab-dashboard history - (b623604) - Amadeus Mader
+- (**deps**) pin subflake locks to the root flake.lock revisions - (c4ee062) - Amadeus Mader
+- (**nix**) remove claude and opencode - (34a73ee) - Amadeus Mader
+
+- - -
+
 ## v0.2.0 - 2026-07-31
 #### Features
 - (**deps**) upgrade cargo deps - (c0afb77) - Amadeus Mader

@@ -418,7 +418,7 @@ checksum = "a31eee39dddec8330830986fcd7625edb5a24ec90ea038215273bbc3adb08ac6"
 
 [[package]]
 name = "dashboard-app"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono",
  "color-eyre",
@@ -436,7 +436,7 @@ dependencies = [
 
 [[package]]
 name = "dashboard-server"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-stream",
  "axum",
