@@ -52,5 +52,5 @@
       '';
     });
 in {
-  inherit server tailwindCss cargoArtifacts;
+  inherit server tailwindCss cargoArtifacts commonArgs craneLib;
 }

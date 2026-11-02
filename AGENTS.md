@@ -34,7 +34,7 @@ just hdash-fmt                        # Format code
 just hdash-fmt-check                  # Check formatting without writing
 just hdash-clippy                     # Strict clippy (pedantic/cargo/nursery, -D warnings)
 just hdash-deny                       # cargo deny
-just hdash-ci                         # fmt check + clippy + tests + deny (the old pre-push gate)
+just hdash-ci                         # fmt check + clippy + tests + deny (pre-push: nix/checks.nix + deny)
 
 # Nix (from the repo root)
 nix build .#homelab-dashboard         # The package the `containers` host runs
