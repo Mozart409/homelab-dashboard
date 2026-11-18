@@ -9,7 +9,12 @@ version = 2
 # Fail on crates pulled from a yanked version.
 yanked = "deny"
 # RUSTSEC ids to consciously ignore (with a reason) go here.
-ignore = []
+ignore = [
+    # chrono rides along only as dashboard-app's build-dependency; every
+    # version is affected, no safe upgrade. Revisit when the advisory is
+    # withdrawn or the build script moves to jiff/time.
+    { id = "RUSTSEC-2026-0543", reason = "unmaintained, no safe upgrade; build-dependency only" },
+]
 
 [licenses]
 version = 2
